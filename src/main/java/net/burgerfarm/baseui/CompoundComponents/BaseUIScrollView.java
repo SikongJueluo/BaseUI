@@ -231,14 +231,41 @@ public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
     }
 
     /**
-     * 根据当前滚动偏移更新内容容器的位置（取负值以实现视口平移）。
+     * 根据当前滚动偏移更新内容容器的位置（取负值以实现视口平移），并执行极速的视锥体剔除。
      */
     private void updateContentPosition() {
+        int scrollOffsetInt = (int) this.currentScrollOffset;
+
         // 修改内容画布的绝对坐标，基类的事件探测将自动跟随
         if (direction == ScrollDirection.VERTICAL) {
-            this.contentContainer.setPos(0, (int) -this.currentScrollOffset);
+            this.contentContainer.setPos(0, -scrollOffsetInt);
         } else {
-            this.contentContainer.setPos((int) -this.currentScrollOffset, 0);
+            this.contentContainer.setPos(-scrollOffsetInt, 0);
+        }
+
+        // 2. 执行视锥体剔除 (看不见的东西坚决不画)
+        // 计算当前视口的物理可见区域 (基于 ScrollView 自身的尺寸)
+        int viewportEnd = scrollOffsetInt + (direction == ScrollDirection.VERTICAL ? this.height : this.width);
+
+        for (BaseUIElement<?> child : this.contentElements) {
+            // 比对主滚动轴上的坐标
+            int childStart, childEnd;
+            if (direction == ScrollDirection.VERTICAL) {
+                childStart = child.getY();
+                childEnd = child.getY() + child.getHeight();
+            } else {
+                childStart = child.getX();
+                childEnd = child.getX() + child.getWidth();
+            }
+
+            // 判断子组件是否在视口范围内 (容忍 1 像素误差防止边缘闪烁)
+            boolean isVisibleInViewport = (childEnd >= scrollOffsetInt - 1) && (childStart <= viewportEnd + 1);
+
+            boolean shouldBeCulled = !isVisibleInViewport;
+
+            if (child.culledByScissor != shouldBeCulled) {
+                child.setCulledByScissor(!isVisibleInViewport);
+            }
         }
     }
 

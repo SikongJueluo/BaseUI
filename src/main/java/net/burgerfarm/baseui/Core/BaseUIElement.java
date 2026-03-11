@@ -80,6 +80,8 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
     protected float alpha = 1.0f;
     /** 是否可见，不可见的组件不参与渲染和事件处理 */
     protected boolean visible = true;
+    /** 是否被滚动视口等容器在物理上剔除（仅阻止渲染和事件触发，不丢失焦点和按压状态） */
+    public boolean culledByScissor = false;
     /** 是否裁剪子组件到边界内（启用剪裁） */
     protected boolean clipToBounds = false;
     /** 是否可获得键盘焦点 */
@@ -177,6 +179,13 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
             curr = curr.parent;
         }
         return false;
+    }
+
+    /**
+     *  设置是否被滚动视口等容器在物理上剔除(仅阻止渲染和事件触发，不丢失焦点和按压状态)
+     */
+    public void setCulledByScissor(boolean culled) {
+        this.culledByScissor = culled;
     }
 
     // ==========================================
@@ -492,14 +501,29 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * @param partialTick  部分 tick，用于平滑动画
      * @param parentAlpha  父组件传递下来的累积透明度
      */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     public final void render(GuiGraphics graphics, double parentMouseX, double parentMouseY, float partialTick, float parentAlpha) {
-        if (!visible || this.alpha <= 0.0f) return;
+        if (!visible || this.alpha <= 0.0f || culledByScissor) return;
 
         // 转换为相对于当前组件的鼠标坐标
         double myInternalMouseX = parentMouseX - this.x;
         double myInternalMouseY = parentMouseY - this.y;
-        this.isHoveredForRender = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
                 parentMouseY >= this.y && parentMouseY < this.y + this.height);
+
+        // 判断鼠标是否被父级的 Scissor 裁剪区挡住(防意外穿透)
+        if (hit && !UIState.SCISSOR_STACK.isEmpty()) {
+            double absMouseX = this.getAbsoluteX() + myInternalMouseX;
+            double absMouseY = this.getAbsoluteY() + myInternalMouseY;
+            int[] scissor = UIState.SCISSOR_STACK.peek();
+            // 如果鼠标在物理上处于当前限制的裁切框之外，强制取消悬停
+            if (absMouseX < scissor[0] || absMouseY < scissor[1] || absMouseX >= scissor[2] || absMouseY >= scissor[3]) {
+                hit = false;
+            }
+        }
+
+        this.isHoveredForRender = hit;
 
         float finalAlpha = this.alpha * parentAlpha;
 
@@ -530,8 +554,8 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
             // 保持安全迭代，拒绝 ConcurrentModificationException 崩溃！
             // 直接使用缓存列表进行遍历，消除 render 阶段的 GC 内存分配
             List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
-            for (BaseUIElement<?> child : safeChildren) {
-                child.render(graphics, myInternalMouseX, myInternalMouseY, partialTick, finalAlpha);
+            for (int i = 0; i < safeChildren.size(); i++) {
+                safeChildren.get(i).render(graphics, myInternalMouseX, myInternalMouseY, partialTick, finalAlpha);
             }
         } finally {
             if (pushedScissor) {
@@ -569,7 +593,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * @return true 表示事件已消费，停止传播
      */
     public final boolean mouseClicked(double parentMouseX, double parentMouseY, int button) {
-        if (!visible) return false;
+        if (!visible || culledByScissor) return false;
         boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
                 parentMouseY >= this.y && parentMouseY < this.y + this.height);
 
@@ -650,8 +674,9 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * @param parentMouseX 鼠标相对于父组件的 X 坐标
      * @param parentMouseY 鼠标相对于父组件的 Y 坐标
      */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     public final void mouseMoved(double parentMouseX, double parentMouseY) {
-        if (!visible) return;
+        if (!visible || culledByScissor) return;
         boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
                 parentMouseY >= this.y && parentMouseY < this.y + this.height);
         if (clipToBounds && !hit) return;
@@ -661,7 +686,9 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
         double internalX = parentMouseX - this.x;
         double internalY = parentMouseY - this.y;
         List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
-        for (BaseUIElement<?> child : safeChildren) child.mouseMoved(internalX, internalY);
+        for (int i = 0; i < safeChildren.size(); i++) {
+            safeChildren.get(i).mouseMoved(internalX, internalY);
+        }
         onMouseMoved(internalX, internalY);
     }
 
@@ -674,7 +701,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * @return true 表示事件已消费
      */
     public final boolean mouseScrolled(double parentMouseX, double parentMouseY, double delta) {
-        if (!visible) return false;
+        if (!visible || culledByScissor) return false;
         boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
                 parentMouseY >= this.y && parentMouseY < this.y + this.height);
         if (clipToBounds && !hit) return false;
