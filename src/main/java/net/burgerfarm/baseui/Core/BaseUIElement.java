@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Stack;
 
 /**
- * CS UI 框架的核心组件基类 (V13.1 锚点超进化与安全防卫版)
+ * CS UI 框架的核心组件基类 (V13.2 性能优化版)
  * <p>
  * 本类是构建 UI 组件的基石，提供了响应式锚点布局引擎、防重入死循环锁、
  * 防并发修改崩溃、精确事件路由等高级特性。所有自定义 UI 组件都应继承此类。
@@ -110,7 +110,11 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
     protected final List<BaseUIElement<?>> children = new ArrayList<>();
     /** 用于按 Z 值升序排序的比较器（Z 越小越靠下） */
     private static final Comparator<BaseUIElement<?>> Z_SORTER = Comparator.comparingInt(BaseUIElement::getZ);
-
+    /** 用于安全遍历的子组件缓存列表，
+     * 避免在 render 和事件 tick 中频繁执行 new ArrayList 导致 GC 卡顿。
+     * (仅在增删改操作后进行同步)
+     */
+    protected List<BaseUIElement<?>> renderChildrenCache = new ArrayList<>();
     // ==========================================
     // 链式调用辅助方法
     // ==========================================
@@ -405,6 +409,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
         if (this.children.remove(child)) {
             child.parent = null;
             child.checkAndReleaseZombieStates();
+            syncChildrenCache();
         }
         return self();
     }
@@ -421,6 +426,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
             child.checkAndReleaseZombieStates();
         }
         this.children.clear();
+        syncChildrenCache();
         return self();
     }
 
@@ -428,7 +434,18 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * 对子组件列表按 Z 值升序排序。
      * 在添加子组件或修改 Z 值时自动调用。
      */
-    protected void sortChildren() { this.children.sort(Z_SORTER); }
+    protected void sortChildren() {
+        this.children.sort(Z_SORTER);
+        syncChildrenCache();
+    }
+
+    /**
+     * 同步子组件缓存。
+     * 仅在树结构发生实际改变（增、删、Z 轴重新排序）时才重新生成缓存列表。
+     */
+    protected void syncChildrenCache() {
+        this.renderChildrenCache = new ArrayList<>(this.children);
+    }
 
     // ====== 焦点与按压状态 ======
 
@@ -511,8 +528,8 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
             drawSelf(graphics, (int)myInternalMouseX, (int)myInternalMouseY, partialTick, finalAlpha);
 
             // 保持安全迭代，拒绝 ConcurrentModificationException 崩溃！
-            // 创建副本以避免在渲染过程中子列表被修改（例如事件处理中添加/移除子组件）
-            List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+            // 直接使用缓存列表进行遍历，消除 render 阶段的 GC 内存分配
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
             for (BaseUIElement<?> child : safeChildren) {
                 child.render(graphics, myInternalMouseX, myInternalMouseY, partialTick, finalAlpha);
             }
@@ -562,7 +579,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
         double internalY = parentMouseY - this.y;
 
         // 逆序遍历子组件（Z 值大的在上层）
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
             if (safeChildren.get(i).mouseClicked(internalX, internalY, button)) return true;
         }
@@ -593,7 +610,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
         double internalX = parentMouseX - this.x;
         double internalY = parentMouseY - this.y;
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
             if (safeChildren.get(i).mouseReleased(internalX, internalY, button)) return true;
         }
@@ -619,7 +636,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
         double internalX = parentMouseX - this.x;
         double internalY = parentMouseY - this.y;
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
             if (safeChildren.get(i).mouseDragged(internalX, internalY, button, dragX, dragY)) return true;
         }
@@ -643,7 +660,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
         double internalX = parentMouseX - this.x;
         double internalY = parentMouseY - this.y;
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (BaseUIElement<?> child : safeChildren) child.mouseMoved(internalX, internalY);
         onMouseMoved(internalX, internalY);
     }
@@ -664,7 +681,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
         double internalX = parentMouseX - this.x;
         double internalY = parentMouseY - this.y;
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
             if (safeChildren.get(i).mouseScrolled(internalX, internalY, delta)) return true;
         }
@@ -684,7 +701,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
     public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (!visible) return false;
         if (UIState.FOCUSED_ELEMENT != null && UIState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
-            List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
             for (int i = safeChildren.size() - 1; i >= 0; i--) {
                 if (safeChildren.get(i).keyPressed(keyCode, scanCode, modifiers)) return true;
             }
@@ -703,7 +720,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
     public final boolean charTyped(char codePoint, int modifiers) {
         if (!visible) return false;
         if (UIState.FOCUSED_ELEMENT != null && UIState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
-            List<BaseUIElement<?>> safeChildren = new ArrayList<>(children);
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
             for (int i = safeChildren.size() - 1; i >= 0; i--) {
                 if (safeChildren.get(i).charTyped(codePoint, modifiers)) return true;
             }
