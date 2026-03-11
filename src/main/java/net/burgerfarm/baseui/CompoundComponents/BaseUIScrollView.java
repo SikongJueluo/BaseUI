@@ -145,6 +145,34 @@ public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
         refreshLayout();
         return this;
     }
+    public int getScrollBarThickness() { return this.scrollBarThickness; }
+
+    public double getScrollOffset() { return this.currentScrollOffset; }
+
+    /**
+     * 外部代码强制设置滚动位置。
+     * 警告：调用此方法前请确保已执行过 refreshLayout()，否则 maxScrollOffset 可能不准确。
+     * @param offset 目标像素偏移
+     */
+    public void setScrollOffset(double offset) {
+        // 钳制合法范围
+        double clamped = Math.max(0, Math.min(this.maxScrollOffset, offset));
+
+        // 如果偏移量无变化直接返回
+        if (Math.abs(this.currentScrollOffset - clamped) < 1e-4) return;
+
+        this.currentScrollOffset = clamped;
+
+        // 同步内容位置,触发视锥体剔除检测
+        updateContentPosition();
+
+        // 同步滑块视觉位置
+        if (this.maxScrollOffset > 0) {
+            this.scrollBar.setValue(this.currentScrollOffset / this.maxScrollOffset);
+        } else {
+            this.scrollBar.setValue(0);
+        }
+    }
 
     /**
      * 重写 setSize 方法，在尺寸变化时自动刷新布局。
