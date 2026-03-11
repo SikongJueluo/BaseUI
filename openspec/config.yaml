@@ -1,0 +1,20 @@
+schema: spec-driven
+
+context: |
+  语言：中文（简体）
+  所有产出物必须用简体中文撰写。
+  在实现前必须提出尽可能完全的具体实现问题。
+  技术栈: Java, Gradle, Minecraft Forge
+  设计哲学: Composite/Aggregate Reuse Principle, Concise
+  注释: Class, Function, Interface, Condition / Loop Branch
+  构建: ./gradlew jar. 运行客户端: ./gradlew runClient.
+  工具: Serena, context7, morph_edit
+
+rules:
+  proposal:
+    - 提案请控制在500字以内
+    - 始终包含一个“非目标”部分
+  tasks:
+    - 将任务分解为最多1小时的子任务
+  specs:
+    - 使用 Given/When/Then/Why 格式
