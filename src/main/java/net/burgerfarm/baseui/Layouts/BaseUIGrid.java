@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CS UI 复合组件：动态网格布局 (Grid / Flexbox) V1.2
+ * BaseUI 布局：动态网格布局 (Grid / Flexbox) V1.2
  * 特性：流式排版、自动高度撑开、高性能批量添加、完美适配锚点引擎缩放、绝对安全的迭代防御。
  * 该组件自动将其子元素按照指定的列数进行流式排列，支持自定义间距、内边距和自动高度。
  * 当 autoHeight 开启时，网格高度会根据内容自动撑开，便于与滚动视口配合。

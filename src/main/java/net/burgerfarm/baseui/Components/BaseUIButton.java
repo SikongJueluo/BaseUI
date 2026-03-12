@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 
 /**
- * CS UI 基础交互组件：按钮 (经过专业交叉验证修订版)
+ * BaseUI 基础交互组件：按钮
  * 集成：防穿透事件吞噬、文字自动排版(AutoSize)、安全的无状态音效触发。
  */
 public class BaseUIButton extends BaseUIElement<BaseUIButton> {

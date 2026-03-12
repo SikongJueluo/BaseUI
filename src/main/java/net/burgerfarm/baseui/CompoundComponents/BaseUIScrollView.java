@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CS UI 复合组件：滚动视口 (ScrollView) - 坚如磐石最终版
+ * BaseUI 复合组件：滚动视窗 (ScrollView)
  * 特性：自动计算内容边界、支持横/纵双向滚动、无缝集成硬件裁剪、防悬空机制与动态增删 API。
  */
 public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {

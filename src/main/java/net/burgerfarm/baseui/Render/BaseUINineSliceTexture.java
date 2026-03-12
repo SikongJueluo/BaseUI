@@ -5,7 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * CS UI 框架：九宫格纹理渲染引擎
+ * BaseUI 渲染框架：九宫格纹理渲染引擎
  * <p>
  * 职责：处理 UI 边框的无损拉伸，管理透明度状态，提供绝对安全的绘图边界校验。
  * 设计：不可变数据类 (Immutable Data Class)，推荐定义为 static final 常量全局复用。
