@@ -1,10 +1,8 @@
 package net.burgerfarm.baseui.Core;
 
 import net.minecraft.client.gui.GuiGraphics;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Stack;
+
+import java.util.*;
 
 /**
  * CS UI 框架的核心组件基类(V13.2)
@@ -460,7 +458,7 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * 获取安全的子组件列表副本（只读遍历使用）
      */
     public List<BaseUIElement<?>> getChildren() {
-        return this.renderChildrenCache;
+        return Collections.unmodifiableList(this.renderChildrenCache);
     }
 
     // ====== 焦点与按压状态 ======
@@ -740,7 +738,13 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
                 if (safeChildren.get(i).keyPressed(keyCode, scanCode, modifiers)) return true;
             }
         }
-        return onKeyPressed(keyCode, scanCode, modifiers);
+
+        // 只有当前组件真正拥有焦点时，才允许触发它自己的键盘回调
+        if (this.isFocused()) {
+            return onKeyPressed(keyCode, scanCode, modifiers);
+        }
+
+        return false;
     }
 
     /**
@@ -759,7 +763,10 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
                 if (safeChildren.get(i).charTyped(codePoint, modifiers)) return true;
             }
         }
-        return onCharTyped(codePoint, modifiers);
+        if (this.isFocused()) {
+            return onCharTyped(codePoint, modifiers);
+        }
+        return false;
     }
 
     // 以下为事件回调的默认实现，子类可选择性重写
