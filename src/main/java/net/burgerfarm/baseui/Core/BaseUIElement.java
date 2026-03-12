@@ -456,6 +456,13 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
         this.renderChildrenCache = new ArrayList<>(this.children);
     }
 
+    /**
+     * 获取安全的子组件列表副本（只读遍历使用）
+     */
+    public List<BaseUIElement<?>> getChildren() {
+        return this.renderChildrenCache;
+    }
+
     // ====== 焦点与按压状态 ======
 
     /**
