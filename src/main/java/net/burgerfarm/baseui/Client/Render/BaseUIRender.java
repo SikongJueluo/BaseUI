@@ -1,0 +1,95 @@
+package net.burgerfarm.baseui.Client.Render;
+
+import net.minecraft.client.gui.GuiGraphics;
+
+/**
+ * BaseUIRender 只负责 Screen/Forge 帧级协调。
+ * MUST NOT 接管 BaseUIElement 树职责：布局、事件冒泡、焦点树、press target、递归渲染。
+ */
+public interface BaseUIRender
+        extends BaseUIRenderFrameEntry,
+                BaseUIRenderInputForwarding,
+                BaseUIRenderLifecycle,
+                BaseUIRenderStateFinalizer,
+                BaseUIRenderPreflightChecklist {
+
+    // TODO(theme-skin): 在后续阶段引入主题/皮肤入口契约（仅占位，不在当前里程碑实现）。
+    // TODO(primitives-provider): 在后续阶段定义统一渲染原语 provider 聚合边界（仅占位）。
+    // TODO(debug-hook): 在后续阶段增加调试可视化挂载点（边界框、scissor、focus、press target）。
+    // TODO(plugin-bridge): 在后续阶段定义插件桥接与扩展生命周期契约（仅占位）。
+    // TODO(reconcile): 在后续阶段定义 DSL -> retained tree 的增量 reconcile 协作边界（仅占位）。
+    // TODO(cache-batching): 在后续阶段定义缓存/批处理与脏区刷新能力入口（仅占位）。
+}
+
+interface BaseUIRenderFrameEntry {
+    void renderFrame(BaseUIRenderContext context);
+}
+
+interface BaseUIRenderInputForwarding {
+    void forwardMouseMoved(BaseUIRenderContext context, double mouseX, double mouseY);
+
+    void forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+
+    void forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+
+    void forwardMouseDragged(
+            BaseUIRenderContext context,
+            double mouseX,
+            double mouseY,
+            int button,
+            double dragDeltaX,
+            double dragDeltaY);
+
+    void forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta);
+
+    void forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+
+    void forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+
+    void forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers);
+}
+
+interface BaseUIRenderLifecycle {
+    void initialize(int screenWidth, int screenHeight);
+
+    void resize(int screenWidth, int screenHeight);
+
+    void onClose();
+}
+
+interface BaseUIRenderStateFinalizer {
+    void resetGlobalUIStates();
+
+    void dispose();
+}
+
+interface BaseUIRenderPreflightChecklist {
+    boolean verifyFrameBridgeBoundary();
+
+    boolean verifySharedContextUsage();
+
+    boolean verifyTodoOnlyForFutureCapabilities();
+
+    boolean verifySafeGlobalStateReleaseOnClose();
+}
+
+/**
+ * 统一帧上下文契约。
+ * 字段语义约束：screenWidth/screenHeight 使用逻辑像素；partialTick 为当前帧插值；
+ * debugEnabled 仅表达调试开关状态，不绑定具体实现。
+ */
+interface BaseUIRenderContext {
+    GuiGraphics graphics();
+
+    double mouseX();
+
+    double mouseY();
+
+    float partialTick();
+
+    int screenWidth();
+
+    int screenHeight();
+
+    boolean debugEnabled();
+}
