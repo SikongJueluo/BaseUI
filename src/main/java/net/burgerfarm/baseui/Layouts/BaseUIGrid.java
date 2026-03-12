@@ -11,6 +11,10 @@ import java.util.List;
  * 该组件自动将其子元素按照指定的列数进行流式排列，支持自定义间距、内边距和自动高度。
  * 当 autoHeight 开启时，网格高度会根据内容自动撑开，便于与滚动视口配合。
  * 所有子元素会被强制设置为 TOP_LEFT 锚点，以确保布局控制权。
+ * <p><strong>
+ * 注意：当您动态改变子组件的可见性（setVisible）或尺寸时，
+ * 网格不会自动重新排列！您需要手动调用 {@link #rearrangeGrid()} 来更新布局。
+ * 这是为了性能考虑，避免不必要的重排。
  */
 public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
 
