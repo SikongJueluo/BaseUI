@@ -54,7 +54,7 @@ public class BaseUIShape extends BaseUIElement<BaseUIShape> {
     }
 
     // ==========================================
-    // 状态查询 API (采纳 AI 建议)
+    // 状态查询 API
     // ==========================================
 
     /** @return 当前顶点数量 */
@@ -168,7 +168,7 @@ public class BaseUIShape extends BaseUIElement<BaseUIShape> {
         return new BaseUIShape()
                 .setDrawMode(VertexFormat.Mode.TRIANGLES)
                 .beginShape()
-                // 严格遵循 Y轴朝下的真正逆时针 (CCW) 顺序！防住了 AI 的错误建议！
+                // 遵循 Y轴朝下的逆时针 (CCW) 顺序
                 .addVertex(0, 0, color).addVertex(0, height, color).addVertex(width, height, color)
                 .addVertex(0, 0, color).addVertex(width, height, color).addVertex(width, 0, color)
                 .endShape();

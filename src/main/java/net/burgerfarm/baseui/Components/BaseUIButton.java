@@ -132,6 +132,9 @@ public class BaseUIButton extends BaseUIElement<BaseUIButton> {
         return this;
     }
 
+    /** 获取当前按钮是否处于禁用状态 */
+    public boolean isDisabled() { return this.disabled; }
+
     // ==========================================
     // 视觉与听觉渲染管线
     // ==========================================
