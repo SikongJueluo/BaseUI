@@ -1,7 +1,5 @@
 package net.burgerfarm.baseui.Client.Render;
 
-import net.minecraft.client.gui.GuiGraphics;
-
 /**
  * BaseUIRender 只负责 Screen/Forge 帧级协调。
  * MUST NOT 接管 BaseUIElement 树职责：布局、事件冒泡、焦点树、press target、递归渲染。
@@ -71,25 +69,4 @@ interface BaseUIRenderPreflightChecklist {
     boolean verifyTodoOnlyForFutureCapabilities();
 
     boolean verifySafeGlobalStateReleaseOnClose();
-}
-
-/**
- * 统一帧上下文契约。
- * 字段语义约束：screenWidth/screenHeight 使用逻辑像素；partialTick 为当前帧插值；
- * debugEnabled 仅表达调试开关状态，不绑定具体实现。
- */
-interface BaseUIRenderContext {
-    GuiGraphics graphics();
-
-    double mouseX();
-
-    double mouseY();
-
-    float partialTick();
-
-    int screenWidth();
-
-    int screenHeight();
-
-    boolean debugEnabled();
 }

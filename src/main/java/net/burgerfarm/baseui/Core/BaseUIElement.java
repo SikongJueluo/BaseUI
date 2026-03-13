@@ -138,6 +138,10 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * 通常在屏幕切换或关闭 GUI 时调用。
      */
     public static void resetAllStates() {
+        resetRenderBridgeStates();
+    }
+
+    public static void resetRenderBridgeStates() {
         if (UIState.FOCUSED_ELEMENT != null) UIState.FOCUSED_ELEMENT.onFocusLost();
         UIState.FOCUSED_ELEMENT = null;
         UIState.PRESS_TARGET = null;
