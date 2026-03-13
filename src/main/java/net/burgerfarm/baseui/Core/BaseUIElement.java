@@ -751,6 +751,17 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
         return false;
     }
 
+    public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (!visible) return false;
+        if (UIState.FOCUSED_ELEMENT != null && UIState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).keyReleased(keyCode, scanCode, modifiers)) return true;
+            }
+        }
+        return onKeyReleased(keyCode, scanCode, modifiers);
+    }
+
     /**
      * 字符输入事件处理入口。
      * 仅当焦点在此组件或其子树中时才会传播。
@@ -792,6 +803,8 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
     /** 按键按下回调 */
     protected boolean onKeyPressed(int k, int s, int m) { return false; }
+
+    protected boolean onKeyReleased(int k, int s, int m) { return false; }
 
     /** 字符输入回调 */
     protected boolean onCharTyped(char c, int m) { return false; }

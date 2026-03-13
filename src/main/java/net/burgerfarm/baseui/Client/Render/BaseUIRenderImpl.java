@@ -43,7 +43,8 @@ public final class BaseUIRenderImpl implements BaseUIRender {
                 context.partialTick(),
                 1.0f);
         } catch (RuntimeException ex) {
-            LOGGER.error("renderFrame runtime exception; frame aborted", ex);
+            LOGGER.error("renderFrame runtime exception; stage=render width={} height={} debug={} frame aborted", context.screenWidth(), context.screenHeight(), context.debugEnabled(), ex);
+            throw ex;
         }
 
         postFrameFinalize();
@@ -58,23 +59,23 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public void forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
+    public boolean forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.mouseClicked(mouseX, mouseY, button);
+        return rootElement.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public void forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
+    public boolean forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.mouseReleased(mouseX, mouseY, button);
+        return rootElement.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public void forwardMouseDragged(
+    public boolean forwardMouseDragged(
         BaseUIRenderContext context,
         double mouseX,
         double mouseY,
@@ -82,39 +83,41 @@ public final class BaseUIRenderImpl implements BaseUIRender {
         double dragDeltaX,
         double dragDeltaY) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.mouseDragged(mouseX, mouseY, button, dragDeltaX, dragDeltaY);
+        return rootElement.mouseDragged(mouseX, mouseY, button, dragDeltaX, dragDeltaY);
     }
 
     @Override
-    public void forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta) {
+    public boolean forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.mouseScrolled(mouseX, mouseY, scrollDelta);
+        return rootElement.mouseScrolled(mouseX, mouseY, scrollDelta);
     }
 
     @Override
-    public void forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
+    public boolean forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.keyPressed(keyCode, scanCode, modifiers);
+        return rootElement.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public void forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
+    public boolean forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
+            return false;
         }
+        return rootElement.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public void forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers) {
+    public boolean forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
-            return;
+            return false;
         }
-        rootElement.charTyped(codePoint, modifiers);
+        return rootElement.charTyped(codePoint, modifiers);
     }
 
     @Override

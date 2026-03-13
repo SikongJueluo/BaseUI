@@ -26,11 +26,11 @@ interface BaseUIRenderFrameEntry {
 interface BaseUIRenderInputForwarding {
     void forwardMouseMoved(BaseUIRenderContext context, double mouseX, double mouseY);
 
-    void forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+    boolean forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button);
 
-    void forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+    boolean forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button);
 
-    void forwardMouseDragged(
+    boolean forwardMouseDragged(
             BaseUIRenderContext context,
             double mouseX,
             double mouseY,
@@ -38,13 +38,13 @@ interface BaseUIRenderInputForwarding {
             double dragDeltaX,
             double dragDeltaY);
 
-    void forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta);
+    boolean forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta);
 
-    void forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+    boolean forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
 
-    void forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+    boolean forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
 
-    void forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers);
+    boolean forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers);
 }
 
 interface BaseUIRenderLifecycle {

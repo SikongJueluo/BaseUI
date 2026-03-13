@@ -2,6 +2,7 @@ package net.burgerfarm.baseui.Client.Render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.burgerfarm.baseui.Core.BaseUIElement;
@@ -66,13 +67,13 @@ class BaseUIRenderImplTest {
     }
 
     @Test
-    void singleFrameExceptionDoesNotBlockNextFrame() {
+    void singleFrameExceptionRethrowsAndDoesNotBlockNextFrame() {
         ThrowOnceElement root = new ThrowOnceElement();
         BaseUIRenderImpl render = new BaseUIRenderImpl(root);
         render.initialize(320, 240);
 
         BaseUIRenderContext context = buildContext();
-        render.renderFrame(context);
+        assertThrows(IllegalStateException.class, () -> render.renderFrame(context));
         render.renderFrame(context);
 
         assertEquals(2, root.renderAttempts);
