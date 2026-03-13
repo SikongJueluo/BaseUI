@@ -49,4 +49,5 @@ public class BaseUIMod {
         public static void onClientSetup(FMLClientSetupEvent event) {
         }
     }
+
 }
