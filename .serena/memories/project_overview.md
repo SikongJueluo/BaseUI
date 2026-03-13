@@ -1,0 +1,1 @@
+BaseUI is a Minecraft Forge 1.20.1 mod providing a retained-tree UI framework under net.burgerfarm.baseui. It uses Java 17, ForgeGradle 6.x, and Parchment mappings. Core rendering/event logic centers on Core/BaseUIElement.java, with bridge/screen integration in Client/RenderBridge and Client/Screens, plus reusable Components, CompoundComponents, Layouts, and Render helpers.

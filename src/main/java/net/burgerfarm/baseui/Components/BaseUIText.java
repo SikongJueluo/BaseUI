@@ -1,6 +1,6 @@
 package net.burgerfarm.baseui.Components;
 
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -147,6 +147,26 @@ public class BaseUIText extends BaseUIElement<BaseUIText> {
         refreshSize(currentText);
     }
 
+    @Override
+    protected boolean requiresPerFrameLayoutPass() {
+        return autoSize && textSupplier != null;
+    }
+
+    @Override
+    protected void beforeLayoutPass() {
+        if (!autoSize) {
+            return;
+        }
+        Component currentText = (textSupplier != null) ? textSupplier.get() : staticText;
+        if (currentText == null) {
+            currentText = Component.empty();
+        }
+        int currentWidth = Minecraft.getInstance().font.width(currentText);
+        if (currentWidth != this.lastTextWidth) {
+            refreshSize(currentText);
+        }
+    }
+
     /** 内部重载：使用已获取的文本刷新尺寸，避免重复拉取 Supplier */
     private void refreshSize(Component currentText) {
         Font font = Minecraft.getInstance().font;
@@ -183,11 +203,6 @@ public class BaseUIText extends BaseUIElement<BaseUIText> {
 
         Font font = Minecraft.getInstance().font;
         int currentWidth = font.width(currentText);
-
-        // 动态文本宽度变化时立即更新布局
-        if (autoSize && currentWidth != this.lastTextWidth) {
-            refreshSize(currentText);
-        }
 
         // 绘制背景
         if (background != null) {

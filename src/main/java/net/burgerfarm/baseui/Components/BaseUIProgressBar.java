@@ -1,6 +1,6 @@
 package net.burgerfarm.baseui.Components;
 
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -181,7 +181,11 @@ public class BaseUIProgressBar extends BaseUIElement<BaseUIProgressBar> {
      * 避免卡顿时出现视觉撕裂。
      */
     public void tick() {
-        // 1. 安全地拉取动态数据
+        onTick();
+    }
+
+    @Override
+    protected void onTick() {
         if (valueSupplier != null) {
             Double val = valueSupplier.get();
             if (val != null) {
@@ -189,10 +193,8 @@ public class BaseUIProgressBar extends BaseUIElement<BaseUIProgressBar> {
             }
         }
 
-        // 2. 固定步长的平滑插值
         if (enableLerp) {
             double diff = currentValue - displayValue;
-            // 吸附阈值：避免因微小浮点误差导致动画无法结束
             double threshold = Math.max(0.001, 0.001 * (max - min));
             if (Math.abs(diff) < threshold) {
                 displayValue = currentValue;

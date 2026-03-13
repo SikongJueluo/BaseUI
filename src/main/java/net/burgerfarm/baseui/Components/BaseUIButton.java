@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.Components;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -25,7 +25,6 @@ public class BaseUIButton extends BaseUIElement<BaseUIButton> {
     // 音效配置
     private boolean playClickSound = true;
     private boolean playHoverSound = false;
-    private boolean wasHoveredLastFrame = false;
 
     // 自动尺寸配置
     private boolean autoSize = false;
@@ -143,12 +142,6 @@ public class BaseUIButton extends BaseUIElement<BaseUIButton> {
 
         boolean currentHover = isHovered();
 
-        // 声音触发必须留在 render 中，应对 UI 滚动位移导致的被动悬停
-        if (currentHover && !wasHoveredLastFrame && !disabled && playHoverSound) {
-            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.5F, 0.25F));
-        }
-        this.wasHoveredLastFrame = currentHover;
-
         BaseUINineSliceTexture currentTex = texNormal;
         int currentTextColor = colorNormal;
         // 经典的 OS 原生 UI 反馈逻辑：按下且鼠标移回按钮范围内才显示按下状态
@@ -189,6 +182,13 @@ public class BaseUIButton extends BaseUIElement<BaseUIButton> {
     private int applyAlpha(int rgbColor, float alpha) {
         int a = Math.max(0, Math.min(255, Math.round(255 * alpha)));
         return (rgbColor & 0x00FFFFFF) | (a << 24);
+    }
+
+    @Override
+    protected void onHoverStateChanged(boolean hovered) {
+        if (hovered && !disabled && playHoverSound) {
+            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.5F, 0.25F));
+        }
     }
 
     // ==========================================

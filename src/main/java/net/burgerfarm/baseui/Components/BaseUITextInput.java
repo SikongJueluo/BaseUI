@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.Components;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -213,8 +213,16 @@ public class BaseUITextInput extends BaseUIElement<BaseUITextInput> {
      * 应在所属屏幕的 tick() 方法中调用此方法。
      */
     public void tick() {
-        if (this.isFocused()) this.cursorBlinkCounter++;
-        else this.cursorBlinkCounter = 0;
+        onTick();
+    }
+
+    @Override
+    protected void onTick() {
+        if (this.isFocused()) {
+            this.cursorBlinkCounter++;
+        } else {
+            this.cursorBlinkCounter = 0;
+        }
     }
 
     /**

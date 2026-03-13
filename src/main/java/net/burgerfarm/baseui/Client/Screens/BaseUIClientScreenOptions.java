@@ -3,7 +3,7 @@ package net.burgerfarm.baseui.Client.Screens;
 import java.util.Objects;
 import java.util.function.Function;
 import net.burgerfarm.baseui.Client.RenderBridge.BaseUIRenderBridge;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 
 public final class BaseUIClientScreenOptions {
     private static final BaseUIClientScreenOptions DEFAULTS = new BaseUIClientScreenOptions(

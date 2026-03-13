@@ -4,9 +4,9 @@ import com.mojang.logging.LogUtils;
 import java.util.Objects;
 import java.util.function.Supplier;
 import net.burgerfarm.baseui.Client.RenderBridge.BaseUIRenderBridge;
-import net.burgerfarm.baseui.Core.BaseUIContext;
+import net.burgerfarm.baseui.core.BaseUIContext;
 import net.burgerfarm.baseui.Client.RenderBridge.BaseUIClientRenderBridge;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -111,7 +111,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         if (render != null && fallbackError == null) {
-            render.forwardMouseMoved(nullContext(), mouseX, mouseY);
+            render.forwardMouseMoved(inputContext(mouseX, mouseY), mouseX, mouseY);
         }
         super.mouseMoved(mouseX, mouseY);
     }
@@ -119,7 +119,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (render != null && fallbackError == null) {
-            if (render.forwardMouseClicked(nullContext(), mouseX, mouseY, button)) {
+            if (render.forwardMouseClicked(inputContext(mouseX, mouseY), mouseX, mouseY, button)) {
                 return true;
             }
         }
@@ -129,7 +129,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (render != null && fallbackError == null) {
-            if (render.forwardMouseReleased(nullContext(), mouseX, mouseY, button)) {
+            if (render.forwardMouseReleased(inputContext(mouseX, mouseY), mouseX, mouseY, button)) {
                 return true;
             }
         }
@@ -139,7 +139,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (render != null && fallbackError == null) {
-            if (render.forwardMouseDragged(nullContext(), mouseX, mouseY, button, dragX, dragY)) {
+            if (render.forwardMouseDragged(inputContext(mouseX, mouseY), mouseX, mouseY, button, dragX, dragY)) {
                 return true;
             }
         }
@@ -149,7 +149,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollDelta) {
         if (render != null && fallbackError == null) {
-            if (render.forwardMouseScrolled(nullContext(), mouseX, mouseY, scrollDelta)) {
+            if (render.forwardMouseScrolled(inputContext(mouseX, mouseY), mouseX, mouseY, scrollDelta)) {
                 return true;
             }
         }
@@ -159,7 +159,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (render != null && fallbackError == null) {
-            if (render.forwardKeyPressed(nullContext(), keyCode, scanCode, modifiers)) {
+            if (render.forwardKeyPressed(inputContext(0, 0), keyCode, scanCode, modifiers)) {
                 return true;
             }
         }
@@ -169,7 +169,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
         if (render != null && fallbackError == null) {
-            if (render.forwardKeyReleased(nullContext(), keyCode, scanCode, modifiers)) {
+            if (render.forwardKeyReleased(inputContext(0, 0), keyCode, scanCode, modifiers)) {
                 return true;
             }
         }
@@ -179,7 +179,7 @@ public final class BaseUIClientScreen extends Screen {
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
         if (render != null && fallbackError == null) {
-            if (render.forwardCharTyped(nullContext(), codePoint, modifiers)) {
+            if (render.forwardCharTyped(inputContext(0, 0), codePoint, modifiers)) {
                 return true;
             }
         }
@@ -222,11 +222,11 @@ public final class BaseUIClientScreen extends Screen {
         }
     }
 
-    private BaseUIContext nullContext() {
+    private BaseUIContext inputContext(double mouseX, double mouseY) {
         return new BaseUIContext(
             null,
-            0,
-            0,
+            mouseX,
+            mouseY,
             0,
             this.width,
             this.height,

@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.CompoundComponents;
 
 import net.burgerfarm.baseui.Components.BaseUIButton;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Layouts.BaseUIGrid;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.client.gui.GuiGraphics;

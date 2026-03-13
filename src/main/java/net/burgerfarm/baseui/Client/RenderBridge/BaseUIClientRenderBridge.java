@@ -1,8 +1,8 @@
 package net.burgerfarm.baseui.Client.RenderBridge;
 
 import com.mojang.logging.LogUtils;
-import net.burgerfarm.baseui.Core.BaseUIContext;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIContext;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import org.slf4j.Logger;
 
 public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
@@ -36,6 +36,8 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
             return;
         }
 
+        rootElement.tickTree();
+
         try {
             rootElement.render(
                 context.graphics(),
@@ -45,7 +47,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
                 1.0f);
         } catch (RuntimeException ex) {
             LOGGER.error("renderFrame runtime exception; stage=render width={} height={} debug={} frame aborted", context.screenWidth(), context.screenHeight(), context.debugEnabled(), ex);
-            throw ex;
+            return;
         }
 
         postFrameFinalize();

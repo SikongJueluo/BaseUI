@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.CompoundComponents;
 
 import net.burgerfarm.baseui.Components.BaseUISlider;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import java.util.ArrayList;
 import java.util.List;
@@ -291,7 +291,7 @@ public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
 
             boolean shouldBeCulled = !isVisibleInViewport;
 
-            if (child.culledByScissor != shouldBeCulled) {
+            if (child.isCulledByScissor() != shouldBeCulled) {
                 child.setCulledByScissor(!isVisibleInViewport);
             }
         }

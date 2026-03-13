@@ -1,6 +1,6 @@
 package net.burgerfarm.baseui.CompoundComponents;
 
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Layouts.BaseUIGrid;
 import net.minecraft.client.gui.GuiGraphics;
 

@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.Components;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.burgerfarm.baseui.Core.BaseUIElement;
+import net.burgerfarm.baseui.core.BaseUIElement;
 import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;

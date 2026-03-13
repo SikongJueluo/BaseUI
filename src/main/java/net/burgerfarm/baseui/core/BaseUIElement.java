@@ -1,0 +1,1245 @@
+package net.burgerfarm.baseui.core;
+
+import net.minecraft.client.gui.GuiGraphics;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * CS UI 框架的核心组件基类(V13.2)
+ * <p>
+ * 本类是构建 UI 组件的基石，提供了响应式锚点布局引擎、防重入死循环锁、
+ * 防并发修改崩溃、精确事件路由等高级特性。所有自定义 UI 组件都应继承此类。
+ * <p>
+ * 主要功能：
+ * - 锚点定位：通过 {@link UIAnchor} 枚举定义组件相对于父容器的对齐方式，
+ * 并支持偏移量，自动计算并更新坐标。
+ * - 树形结构管理：支持添加、移除子组件，并根据 Z 轴深度自动排序。
+ * - 渲染管线：集成剪裁（Scissor）栈，支持裁剪到边界、透明度叠加。
+ * - 事件处理：精确的鼠标（点击、释放、拖拽、移动、滚轮）和键盘事件路由，
+ * 考虑裁剪区域和可见性，并维护全局按压目标和焦点元素。
+ * - 安全机制：布局更新时使用防重入锁避免递归死循环；渲染和事件处理时
+ * 通过创建子组件列表的副本来防止并发修改异常。
+ * - 全局状态管理：通过静态内部类 {@link UIState} 维护剪裁栈、按压目标
+ * 和焦点元素，并提供重置方法。
+ *
+ * @param <T> 子类自身的类型，用于实现链式调用（CRTP 模式）
+ */
+public abstract class BaseUIElement<T extends BaseUIElement<T>> {
+
+    /**
+     * 用于按 Z 值升序排序的比较器（Z 越小越靠下）
+     */
+    private static final Comparator<BaseUIElement<?>> Z_SORTER = Comparator.comparingInt(BaseUIElement::getZ);
+    /**
+     * 子组件列表，按 Z 值排序
+     */
+    protected final List<BaseUIElement<?>> children = new ArrayList<>();
+    /**
+     * 用于安全遍历的子组件缓存列表，
+     * 避免在 render 和事件 tick 中频繁执行 new ArrayList 导致 GC 卡顿。
+     * (仅在增删改操作后进行同步)
+     */
+    protected final List<BaseUIElement<?>> renderChildrenCache = new ArrayList<>();
+    private final BaseUIRenderCommandBuffer renderCommandBuffer = new BaseUIRenderCommandBuffer();
+    private final List<BaseUIElement<?>> readOnlyChildrenCache = Collections.unmodifiableList(renderChildrenCache);
+    /**
+     * 当前组件的锚点类型，默认为 TOP_LEFT
+     */
+    protected UIAnchor anchor = UIAnchor.TOP_LEFT;
+    /**
+     * 相对于锚点的 X 轴偏移量（像素）
+     */
+    protected int anchorOffsetX = 0;
+
+    // ==========================================
+    // 锚点与位置属性
+    // ==========================================
+    /**
+     * 相对于锚点的 Y 轴偏移量（像素）
+     */
+    protected int anchorOffsetY = 0;
+    /**
+     * 计算后的实际 X 坐标（相对于父组件）
+     */
+    protected int x, y;
+    /**
+     * 组件的 Z 轴深度，值越大越靠上
+     */
+    protected int z;
+    /**
+     * 组件宽度（像素）
+     */
+    protected int width;
+    /**
+     * 组件高度（像素）
+     */
+    protected int height;
+    /**
+     * 透明度，0.0 完全透明，1.0 完全不透明
+     */
+    protected float alpha = 1.0f;
+    /**
+     * 是否可见，不可见的组件不参与渲染和事件处理
+     */
+    protected boolean visible = true;
+
+    // ==========================================
+    // 视觉与行为属性
+    // ==========================================
+    /**
+     * 是否裁剪子组件到边界内（启用剪裁）
+     */
+    protected boolean clipToBounds = false;
+    /**
+     * 是否可获得键盘焦点
+     */
+    protected boolean focusable = false;
+    /**
+     * 当前渲染周期中鼠标是否悬停在此组件上。
+     * 由 render() 方法更新，供子类绘制时使用。
+     */
+    protected boolean isHoveredForRender = false;
+    /**
+     * 父组件引用，若为 null 则表示根组件
+     */
+    protected BaseUIElement<?> parent;
+    /**
+     * 是否被滚动视口等容器在物理上剔除（仅阻止渲染和事件触发，不丢失焦点和按压状态）
+     */
+    private boolean culledByScissor = false;
+    private int lastFrameCommandCount = 0;
+    private float lastFramePartialTick = 0.0f;
+    /**
+     * 【新增】防重入锁，防止 layout 更新时因递归调用陷入死循环。
+     * 在 {@link #updateLayout()} 开始时设为 true，结束时设为 false。
+     */
+    private boolean isUpdatingLayout = false;
+
+    // ==========================================
+    // 布局安全机制
+    // ==========================================
+    private boolean layoutDirty = true;
+    private boolean subtreeLayoutDirty = true;
+
+    /**
+     * 重置所有全局 UI 状态。
+     * 丢失焦点通知、清空按压目标和剪裁栈。
+     * 通常在屏幕切换或关闭 GUI 时调用。
+     */
+    public static void resetAllStates() {
+        resetRenderBridgeStates();
+    }
+
+    // ==========================================
+    // 树形结构
+    // ==========================================
+
+    public static void resetRenderBridgeStates() {
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null) BaseUIRenderState.FOCUSED_ELEMENT.onFocusLost();
+        BaseUIRenderState.FOCUSED_ELEMENT = null;
+        BaseUIRenderState.PRESS_TARGET = null;
+    }
+
+    /**
+     * 返回当前实例，类型转换为 T，用于实现链式调用。
+     * 警告：若 T 不是实际类型，转换可能不安全，但在此框架中约定子类正确实现。
+     *
+     * @return 当前对象，类型为 T
+     */
+    @SuppressWarnings("unchecked")
+    protected T self() {
+        return (T) this;
+    }
+
+    /**
+     * 检查并释放可能悬挂的焦点/按压状态。
+     * 当组件从树中被移除或隐藏时，若它或其子组件持有全局状态，
+     * 则清除这些状态并触发相应回调。
+     * 此方法会在 {@link #setVisible(boolean)} 和 {@link #removeChild(BaseUIElement)} 等地方被调用。
+     */
+    protected void checkAndReleaseZombieStates() {
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            BaseUIRenderState.FOCUSED_ELEMENT.onFocusLost();
+            BaseUIRenderState.FOCUSED_ELEMENT = null;
+        }
+        if (BaseUIRenderState.PRESS_TARGET != null && BaseUIRenderState.PRESS_TARGET.isInSubtreeOf(this)) {
+            BaseUIRenderState.PRESS_TARGET = null;
+        }
+    }
+
+    /**
+     * 判断当前组件是否在指定根组件的子树中。
+     *
+     * @param root 可能的根组件
+     * @return 如果在子树中则返回 true
+     */
+    protected boolean isInSubtreeOf(BaseUIElement<?> root) {
+        if (root == null) return false;
+
+        BaseUIElement<?> current = this;
+        while (current != null) {
+            if (current == root) return true;
+            current = current.parent;
+        }
+        return false;
+    }
+    // ==========================================
+    // 链式调用辅助方法
+    // ==========================================
+
+    /**
+     * @return 当前组件是否被裁剪剔除
+     */
+    public boolean isCulledByScissor() {
+        return culledByScissor;
+    }
+
+    /**
+     * 设置是否被滚动视口等容器在物理上剔除(仅阻止渲染和事件触发，不丢失焦点和按压状态)
+     */
+    public void setCulledByScissor(boolean culled) {
+        this.culledByScissor = culled;
+    }
+
+    // ==========================================
+    // 全局状态重置
+    // ==========================================
+
+    /**
+     * 设置组件的锚点类型。
+     *
+     * @param anchor 新的锚点
+     * @return 当前实例，用于链式调用
+     */
+    public T setAnchor(UIAnchor anchor) {
+        if (this.anchor != anchor) {
+            this.anchor = anchor;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 设置组件的锚点类型及偏移量。
+     *
+     * @param anchor  新的锚点
+     * @param offsetX X 轴偏移量
+     * @param offsetY Y 轴偏移量
+     * @return 当前实例，用于链式调用
+     */
+    public T setAnchor(UIAnchor anchor, int offsetX, int offsetY) {
+        boolean changed = (this.anchor != anchor || this.anchorOffsetX != offsetX || this.anchorOffsetY != offsetY);
+        if (changed) {
+            this.anchor = anchor;
+            this.anchorOffsetX = offsetX;
+            this.anchorOffsetY = offsetY;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 核心排版计算，根据父组件大小、锚点和偏移量重新计算当前组件的实际位置 (x, y)。
+     * 加入防死循环机制，若已在布局更新中则直接返回。
+     * 计算完成后递归调用所有子组件的 {@link #updateLayout()}。
+     */
+    public void updateLayout() {
+        if (isUpdatingLayout) return;
+        boolean forcePerFrameLayout = requiresPerFrameLayoutPass();
+        if (!forcePerFrameLayout && !layoutDirty && !subtreeLayoutDirty) return;
+        isUpdatingLayout = true;
+
+        try {
+            boolean selfDirtyAtEnter = layoutDirty;
+            beforeLayoutPass();
+            boolean recalcSelf = selfDirtyAtEnter || layoutDirty || forcePerFrameLayout;
+
+            if (recalcSelf && parent != null) {
+                int pw = parent.getWidth();
+                int ph = parent.getHeight();
+
+                this.x = switch (anchor) {
+                    case TOP_LEFT, MIDDLE_LEFT, BOTTOM_LEFT -> anchorOffsetX;
+                    case TOP_CENTER, CENTER, BOTTOM_CENTER -> (pw - this.width) / 2 + anchorOffsetX;
+                    case TOP_RIGHT, MIDDLE_RIGHT, BOTTOM_RIGHT -> pw - this.width + anchorOffsetX;
+                };
+
+                this.y = switch (anchor) {
+                    case TOP_LEFT, TOP_CENTER, TOP_RIGHT -> anchorOffsetY;
+                    case MIDDLE_LEFT, CENTER, MIDDLE_RIGHT -> (ph - this.height) / 2 + anchorOffsetY;
+                    case BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT -> ph - this.height + anchorOffsetY;
+                };
+            } else if (recalcSelf) {
+                this.x = anchorOffsetX;
+                this.y = anchorOffsetY;
+            }
+
+            boolean propagateAllChildren = recalcSelf;
+            for (BaseUIElement<?> child : children) {
+                if (propagateAllChildren || child.layoutDirty || child.subtreeLayoutDirty || child.requiresPerFrameLayoutPass()) {
+                    child.updateLayout();
+                }
+            }
+
+            layoutDirty = false;
+            subtreeLayoutDirty = false;
+        } finally {
+            isUpdatingLayout = false;
+        }
+    }
+
+    protected void beforeLayoutPass() {
+    }
+
+    protected boolean requiresPerFrameLayoutPass() {
+        return false;
+    }
+
+    // ==========================================
+    // 锚点与响应式排版引擎
+    // ==========================================
+
+    protected final void requestLayout() {
+        markLayoutDirty();
+    }
+
+    protected void onHoverStateChanged(boolean hovered) {
+    }
+
+    protected void onTick() {
+    }
+
+    @SuppressWarnings("ForLoopReplaceableByForEach")
+    public final void tickTree() {
+        onTick();
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = 0; i < safeChildren.size(); i++) {
+            safeChildren.get(i).tickTree();
+        }
+    }
+
+    /**
+     * 同时设置 X、Y 轴偏移量。
+     *
+     * @param x X 偏移量
+     * @param y Y 偏移量
+     * @return 当前实例
+     */
+    public T setPos(int x, int y) {
+        if (this.anchorOffsetX != x || this.anchorOffsetY != y) {
+            this.anchorOffsetX = x;
+            this.anchorOffsetY = y;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 同时设置宽度和高度。
+     *
+     * @param width  新宽度
+     * @param height 新高度
+     * @return 当前实例
+     */
+    public T setSize(int width, int height) {
+        if (this.width != width || this.height != height) {
+            this.width = width;
+            this.height = height;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 设置是否裁剪子组件到边界内。
+     *
+     * @param clip true 启用裁剪
+     * @return 当前实例
+     */
+    public T setClipToBounds(boolean clip) {
+        this.clipToBounds = clip;
+        return self();
+    }
+
+    /**
+     * 设置是否可获得键盘焦点。
+     *
+     * @param focusable true 可获得焦点
+     * @return 当前实例
+     */
+    public T setFocusable(boolean focusable) {
+        this.focusable = focusable;
+        return self();
+    }
+
+    /**
+     * 设置透明度，值将被限制在 0.0 到 1.0 之间。
+     *
+     * @param alpha 透明度值
+     * @return 当前实例
+     */
+    public T setAlpha(float alpha) {
+        this.alpha = Math.max(0f, Math.min(1f, alpha));
+        return self();
+    }
+
+    // ====== 链式 Setter (加入数值脏检查，避免不必要的布局刷新) ======
+
+    /**
+     * 添加一个子组件。
+     * 如果子组件已有父组件，会先从其原父组件移除。
+     * 添加后更新子组件布局，并按 Z 值对子列表排序。
+     *
+     * @param child 要添加的子组件
+     * @return 当前实例
+     */
+    public T addChild(BaseUIElement<?> child) {
+        if (child.parent != null) child.parent.removeChild(child);
+        child.parent = this;
+        child.markLayoutDirty();
+        this.children.add(child);
+        child.updateLayout();
+        sortChildren();
+        this.subtreeLayoutDirty = true;
+        return self();
+    }
+
+    /**
+     * 移除一个子组件。
+     * 移除后清空其父引用，并检查释放可能的状态。
+     *
+     * @param child 要移除的子组件
+     * @return 当前实例
+     */
+    public T removeChild(BaseUIElement<?> child) {
+        if (this.children.remove(child)) {
+            child.parent = null;
+            child.checkAndReleaseZombieStates();
+            syncChildrenCache();
+            this.subtreeLayoutDirty = true;
+        }
+        return self();
+    }
+
+    /**
+     * 移除所有子组件。
+     * 对每个子组件清空父引用并检查释放状态。
+     *
+     * @return 当前实例
+     */
+    public T clearChildren() {
+        for (BaseUIElement<?> child : children) {
+            child.parent = null;
+            child.checkAndReleaseZombieStates();
+        }
+        this.children.clear();
+        syncChildrenCache();
+        this.subtreeLayoutDirty = true;
+        return self();
+    }
+
+    /**
+     * 对子组件列表按 Z 值升序排序。
+     * 在添加子组件或修改 Z 值时自动调用。
+     */
+    protected void sortChildren() {
+        this.children.sort(Z_SORTER);
+        syncChildrenCache();
+    }
+
+    /**
+     * 同步子组件缓存。
+     * 仅在树结构发生实际改变（增、删、Z 轴重新排序）时才重新生成缓存列表。
+     */
+    protected void syncChildrenCache() {
+        this.renderChildrenCache.clear();
+        if (!this.children.isEmpty()) {
+            this.renderChildrenCache.addAll(this.children);
+        }
+        this.subtreeLayoutDirty = true;
+    }
+
+    /**
+     * 获取安全的子组件列表副本（只读遍历使用）
+     */
+    public List<BaseUIElement<?>> getChildren() {
+        return readOnlyChildrenCache;
+    }
+
+    /**
+     * 请求将键盘焦点设置到当前组件。
+     * 只有可见且可聚焦的组件才能获得焦点。
+     * 若已有焦点组件，会先通知其失去焦点。
+     */
+    public void requestFocus() {
+        if (!visible || !focusable) return;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != this) {
+            if (BaseUIRenderState.FOCUSED_ELEMENT != null) BaseUIRenderState.FOCUSED_ELEMENT.onFocusLost();
+            BaseUIRenderState.FOCUSED_ELEMENT = this;
+            this.onFocusGained();
+        }
+    }
+
+    /**
+     * @return 当前组件是否拥有键盘焦点
+     */
+    public boolean isFocused() {
+        return BaseUIRenderState.FOCUSED_ELEMENT == this;
+    }
+
+    /**
+     * @return 当前组件是否被鼠标按下（作为按压目标）
+     */
+    public boolean isPressed() {
+        return BaseUIRenderState.PRESS_TARGET == this;
+    }
+
+    /**
+     * @return 当前渲染周期中鼠标是否悬停在此组件上
+     */
+    public boolean isHovered() {
+        return isHoveredForRender;
+    }
+
+    /**
+     * 当组件获得焦点时回调，子类可重写以改变外观等
+     */
+    protected void onFocusGained() {
+    }
+
+    // ====== 树结构管理 ======
+
+    /**
+     * 当组件失去焦点时回调，子类可重写
+     */
+    protected void onFocusLost() {
+    }
+
+    /**
+     * 渲染组件的入口方法。不可被重写，它处理了剪裁、坐标变换、状态传递和安全迭代。
+     * 子类应实现 {@link #drawSelf(GuiGraphics, int, int, float, float)} 来绘制自身内容。
+     *
+     * @param graphics     Minecraft 的绘图对象
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param partialTick  部分 tick，用于平滑动画
+     * @param parentAlpha  父组件传递下来的累积透明度
+     */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
+    public final void render(
+        GuiGraphics graphics,
+        double parentMouseX,
+        double parentMouseY,
+        float partialTick,
+        float parentAlpha) {
+        if (!visible || this.alpha <= 0.0f || isCulledByScissor()) return;
+
+        updateLayout();
+
+        renderCommandBuffer.begin();
+        // Use Integer.MIN_VALUE/MAX_VALUE as "no clip" sentinel - all on stack, zero GC
+        collectRenderCommands(renderCommandBuffer, parentMouseX, parentMouseY, parentAlpha, 0,
+                              Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
+        renderCommandBuffer.sortByLayerAndVisitOrder();
+        lastFrameCommandCount = renderCommandBuffer.size();
+        lastFramePartialTick = partialTick;
+        executeRenderCommands(graphics, renderCommandBuffer);
+    }
+
+    @SuppressWarnings("ForLoopReplaceableByForEach")
+    private void collectRenderCommands(
+        BaseUIRenderCommandBuffer commandBuffer,
+        double parentMouseX,
+        double parentMouseY,
+        float parentAlpha,
+        int parentGlobalZ,
+        int parentClipL,
+        int parentClipT,
+        int parentClipR,
+        int parentClipB
+                                      ) {
+        // 可见性检查：不可见、透明或被裁剪剔除的元素直接跳过
+        if (!visible || this.alpha <= 0.0f || isCulledByScissor()) {
+            return;
+        }
+
+        // 将鼠标坐标从父组件空间转换到当前组件空间
+        double myInternalMouseX = parentMouseX - this.x;
+        double myInternalMouseY = parentMouseY - this.y;
+
+        // 计算全局坐标和透明度
+        int absoluteX = getAbsoluteX();
+        int absoluteY = getAbsoluteY();
+        int globalZ = parentGlobalZ + this.z;
+        float finalAlpha = this.alpha * parentAlpha;
+
+        // 初始化裁剪区域为父级传入的值
+        int currentClipL = parentClipL;
+        int currentClipT = parentClipT;
+        int currentClipR = parentClipR;
+        int currentClipB = parentClipB;
+        boolean hasClip = false;
+
+        // 如果启用裁剪，计算当前组件边界与父级裁剪区域的交集
+        if (clipToBounds) {
+            int selfL = absoluteX;
+            int selfT = absoluteY;
+            int selfR = absoluteX + width;
+            int selfB = absoluteY + height;
+            currentClipL = Math.max(selfL, parentClipL);
+            currentClipT = Math.max(selfT, parentClipT);
+            currentClipR = Math.min(selfR, parentClipR);
+            currentClipB = Math.min(selfB, parentClipB);
+            // 确保右边界不小于左边界，下边界不小于上边界
+            if (currentClipR < currentClipL) currentClipR = currentClipL;
+            if (currentClipB < currentClipT) currentClipB = currentClipT;
+            hasClip = true;
+        }
+
+        // 检测鼠标是否命中当前组件（考虑裁剪区域）
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width
+            && parentMouseY >= this.y && parentMouseY < this.y + this.height);
+
+        // 如果在裁剪区域外，则不命中
+        if (hit && hasClip) {
+            double absMouseX = absoluteX + myInternalMouseX;
+            double absMouseY = absoluteY + myInternalMouseY;
+            if (absMouseX < currentClipL || absMouseY < currentClipT
+                || absMouseX >= currentClipR || absMouseY >= currentClipB) {
+                hit = false;
+            }
+        }
+
+        // 更新悬停状态并触发回调
+        boolean hoverChanged = this.isHoveredForRender != hit;
+        this.isHoveredForRender = hit;
+        if (hoverChanged) {
+            onHoverStateChanged(hit);
+        }
+
+        // 将当前元素的渲染命令添加到缓冲区
+        commandBuffer.add(
+            this,
+            globalZ,
+            absoluteX,
+            absoluteY,
+            (int) myInternalMouseX,
+            (int) myInternalMouseY,
+            finalAlpha,
+            hasClip,
+            currentClipL,
+            currentClipT,
+            currentClipR,
+            currentClipB);
+
+        // 递归收集所有子元素的渲染命令
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = 0; i < safeChildren.size(); i++) {
+            safeChildren.get(i).collectRenderCommands(
+                commandBuffer,
+                myInternalMouseX,
+                myInternalMouseY,
+                finalAlpha,
+                globalZ,
+                currentClipL,
+                currentClipT,
+                currentClipR,
+                currentClipB);
+        }
+    }
+
+    /**
+     * 执行渲染命令缓冲区中的所有命令
+     * <p>
+     * 按排序后的顺序依次执行：
+     * <ol>
+     *   <li>坐标变换（translate）</li>
+     *   <li>裁剪区域设置（enableScissor）</li>
+     *   <li>绘制自身内容（drawSelf）</li>
+     * </ol>
+     * 优化：仅在裁剪区域变化时才调用 enableScissor，减少GPU状态切换。
+     *
+     * @param graphics      绘图对象
+     * @param commandBuffer 命令缓冲区
+     */
+    private void executeRenderCommands(GuiGraphics graphics, BaseUIRenderCommandBuffer commandBuffer) {
+        int[] clipState = {0, 0, 0, 0, 0};
+
+        try {
+            for (int ordered = 0; ordered < commandBuffer.size(); ordered++) {
+                int idx = commandBuffer.orderedIndexAt(ordered);
+                executeSingleCommand(graphics, commandBuffer, idx, clipState);
+            }
+        } finally {
+            graphics.disableScissor();
+        }
+    }
+
+    private void executeSingleCommand(
+        GuiGraphics graphics,
+        BaseUIRenderCommandBuffer buffer,
+        int idx,
+        int[] clipState) {
+        graphics.pose().pushPose();
+        try {
+            graphics.pose().translate(buffer.absXAt(idx), buffer.absYAt(idx), buffer.globalZAt(idx));
+
+            boolean newHasClip = updateScissor(graphics, buffer, idx, clipState);
+            clipState[4] = newHasClip ? 1 : 0;
+
+            buffer.elementAt(idx).drawSelf(graphics, buffer.localMouseXAt(idx), buffer.localMouseYAt(idx),
+                                           lastFramePartialTick, buffer.alphaAt(idx));
+        } finally {
+            graphics.pose().popPose();
+        }
+    }
+
+    private boolean updateScissor(GuiGraphics g, BaseUIRenderCommandBuffer buffer, int idx, int[] clipState) {
+        boolean hasClip = clipState[4] != 0;
+
+        if (buffer.hasClipAt(idx)) {
+            int l = buffer.clipLAt(idx), t = buffer.clipTAt(idx), r = buffer.clipRAt(idx), b = buffer.clipBAt(idx);
+            if (!hasClip || clipState[0] != l || clipState[1] != t || clipState[2] != r || clipState[3] != b) {
+                g.enableScissor(l, t, r, b);
+                clipState[0] = l;
+                clipState[1] = t;
+                clipState[2] = r;
+                clipState[3] = b;
+                return true;
+            }
+            return hasClip;
+        } else if (hasClip) {
+            g.disableScissor();
+            return false;
+        }
+        return hasClip;
+    }
+
+    /**
+     * 子类实现此方法以绘制自身内容。
+     * 注意：坐标已经平移至组件原点，鼠标坐标已转换为相对于组件的内部坐标。
+     *
+     * @param graphics    绘图对象
+     * @param mouseX      鼠标相对于当前组件的 X 坐标
+     * @param mouseY      鼠标相对于当前组件的 Y 坐标
+     * @param partialTick 部分 tick
+     * @param finalAlpha  最终透明度（已乘父级透明度）
+     */
+    protected abstract void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha);
+
+    // ====== 焦点与按压状态 ======
+
+    /**
+     * 鼠标点击事件处理入口。
+     * 从最上层子组件向下传递，直到有组件消费事件。
+     * 若点击位置命中且可聚焦，则请求焦点；同时将当前组件设为按压目标。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键（0=左键，1=右键，2=中键等）
+     * @return true 表示事件已消费，停止传播
+     */
+    public final boolean mouseClicked(double parentMouseX, double parentMouseY, int button) {
+        if (parent == null && lastFrameCommandCount > 0) {
+            return mouseClickedFromFrameSnapshot(parentMouseX, parentMouseY, button);
+        }
+        if (!visible || isCulledByScissor()) return false;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+
+        if (clipToBounds && !hit) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+
+        // 逆序遍历子组件（Z 值大的在上层）
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseClicked(internalX, internalY, button)) return true;
+        }
+
+        if (hit) {
+            if (focusable) requestFocus();
+            BaseUIRenderState.PRESS_TARGET = this;
+            return onClicked(internalX, internalY, button);
+        }
+        return false;
+    }
+
+    /**
+     * 鼠标释放事件处理入口。
+     * 优先处理当前按压目标（若为自己），否则向下传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseReleased(double parentMouseX, double parentMouseY, int button) {
+        if (parent == null && BaseUIRenderState.PRESS_TARGET != null) {
+            BaseUIElement<?> target = BaseUIRenderState.PRESS_TARGET;
+            BaseUIRenderState.PRESS_TARGET = null;
+            return target.onReleased(parentMouseX - target.getAbsoluteX(),
+                                     parentMouseY - target.getAbsoluteY(),
+                                     button);
+        }
+        if (BaseUIRenderState.PRESS_TARGET == this) {
+            BaseUIRenderState.PRESS_TARGET = null;
+            return onReleased(parentMouseX - this.x, parentMouseY - this.y, button);
+        }
+        if (!visible) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseReleased(internalX, internalY, button)) return true;
+        }
+        return onReleased(internalX, internalY, button);
+    }
+
+    /**
+     * 鼠标拖拽事件处理入口。
+     * 优先发送给按压目标，否则向下传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键
+     * @param dragX        X 轴拖拽增量
+     * @param dragY        Y 轴拖拽增量
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseDragged(
+        double parentMouseX,
+        double parentMouseY,
+        int button,
+        double dragX,
+        double dragY) {
+        if (parent == null && BaseUIRenderState.PRESS_TARGET != null) {
+            BaseUIElement<?> target = BaseUIRenderState.PRESS_TARGET;
+            return target.onDragged(parentMouseX - target.getAbsoluteX(),
+                                    parentMouseY - target.getAbsoluteY(),
+                                    button,
+                                    dragX,
+                                    dragY);
+        }
+        if (BaseUIRenderState.PRESS_TARGET == this) {
+            return onDragged(parentMouseX - this.x, parentMouseY - this.y, button, dragX, dragY);
+        }
+        if (!visible) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseDragged(internalX, internalY, button, dragX, dragY)) return true;
+        }
+        return onDragged(internalX, internalY, button, dragX, dragY);
+    }
+
+    /**
+     * 鼠标移动事件处理入口。
+     * 更新当前组件的悬停状态，并向所有子组件传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
+    public final void mouseMoved(double parentMouseX, double parentMouseY) {
+        if (!visible || isCulledByScissor()) return;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+        if (clipToBounds && !hit) return;
+
+        this.isHoveredForRender = hit;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = 0; i < safeChildren.size(); i++) {
+            safeChildren.get(i).mouseMoved(internalX, internalY);
+        }
+        onMouseMoved(internalX, internalY);
+    }
+
+    /**
+     * 鼠标滚轮事件处理入口。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param delta        滚动增量
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseScrolled(double parentMouseX, double parentMouseY, double delta) {
+        if (parent == null && lastFrameCommandCount > 0) {
+            return mouseScrolledFromFrameSnapshot(parentMouseX, parentMouseY, delta);
+        }
+        if (!visible || isCulledByScissor()) return false;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+        if (clipToBounds && !hit) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseScrolled(internalX, internalY, delta)) return true;
+        }
+        if (hit) return onScrolled(internalX, internalY, delta);
+        return false;
+    }
+
+    /**
+     * 键盘按键按下事件处理入口。
+     * 仅当焦点在此组件或其子树中时才会传播。
+     *
+     * @param keyCode   按键码
+     * @param scanCode  扫描码
+     * @param modifiers 修饰键（如 Shift、Ctrl）
+     * @return true 表示事件已消费
+     */
+    public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).keyPressed(keyCode, scanCode, modifiers)) return true;
+            }
+        }
+
+        // 只有当前组件真正拥有焦点时，才允许触发它自己的键盘回调
+        if (this.isFocused()) {
+            return onKeyPressed(keyCode, scanCode, modifiers);
+        }
+
+        return false;
+    }
+
+    // ==========================================
+    // 渲染管线与鼠标/键盘管线
+    // ==========================================
+
+    public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).keyReleased(keyCode, scanCode, modifiers)) return true;
+            }
+        }
+        return onKeyReleased(keyCode, scanCode, modifiers);
+    }
+
+    /**
+     * 字符输入事件处理入口。
+     * 仅当焦点在此组件或其子树中时才会传播。
+     *
+     * @param codePoint 输入的字符
+     * @param modifiers 修饰键
+     * @return true 表示事件已消费
+     */
+    public final boolean charTyped(char codePoint, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).charTyped(codePoint, modifiers)) return true;
+            }
+        }
+        if (this.isFocused()) {
+            return onCharTyped(codePoint, modifiers);
+        }
+        return false;
+    }
+
+    /**
+     * 鼠标点击回调
+     */
+    protected boolean onClicked(double mouseX, double mouseY, int button) {
+        return false;
+    }
+
+    /**
+     * 鼠标释放回调
+     */
+    protected boolean onReleased(double mouseX, double mouseY, int button) {
+        return false;
+    }
+
+    /**
+     * 鼠标拖拽回调
+     */
+    protected boolean onDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        return false;
+    }
+
+    /**
+     * 鼠标移动回调
+     */
+    protected void onMouseMoved(double mouseX, double mouseY) {
+    }
+
+    /**
+     * 鼠标滚轮回调
+     */
+    protected boolean onScrolled(double mouseX, double mouseY, double delta) {
+        return false;
+    }
+
+    /**
+     * 按键按下回调
+     */
+    protected boolean onKeyPressed(int k, int s, int m) {
+        return false;
+    }
+
+    protected boolean onKeyReleased(int k, int s, int m) {
+        return false;
+    }
+
+    /**
+     * 字符输入回调
+     */
+    protected boolean onCharTyped(char c, int m) {
+        return false;
+    }
+
+    /**
+     * 获取组件在屏幕上的绝对 X 坐标（通过向上累加父组件坐标）
+     */
+    public int getAbsoluteX() {
+        return parent == null ? x : parent.getAbsoluteX() + x;
+    }
+
+    /**
+     * 获取组件在屏幕上的绝对 Y 坐标
+     */
+    public int getAbsoluteY() {
+        return parent == null ? y : parent.getAbsoluteY() + y;
+    }
+
+    /**
+     * 获取相对于父组件的 X 坐标
+     */
+    public int getX() {
+        return x;
+    }
+
+    // 以下为事件回调的默认实现，子类可选择性重写
+
+    /**
+     * 设置 X 轴偏移量（相对于锚点）。
+     *
+     * @param x 新的偏移量
+     * @return 当前实例
+     */
+    public T setX(int x) {
+        if (this.anchorOffsetX != x) {
+            this.anchorOffsetX = x;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 获取相对于父组件的 Y 坐标
+     */
+    public int getY() {
+        return y;
+    }
+
+    /**
+     * 设置 Y 轴偏移量（相对于锚点）。
+     *
+     * @param y 新的偏移量
+     * @return 当前实例
+     */
+    public T setY(int y) {
+        if (this.anchorOffsetY != y) {
+            this.anchorOffsetY = y;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 获取 Z 轴深度
+     */
+    public int getZ() {
+        return z;
+    }
+
+    /**
+     * 设置 Z 轴深度，并通知父组件重新排序子列表。
+     *
+     * @param z 新的 Z 值
+     * @return 当前实例
+     */
+    public T setZ(int z) {
+        this.z = z;
+        if (parent != null) parent.sortChildren();
+        return self();
+    }
+
+    /**
+     * 获取组件宽度
+     */
+    public int getWidth() {
+        return width;
+    }
+
+    /**
+     * 设置组件宽度。
+     *
+     * @param width 新宽度
+     * @return 当前实例
+     */
+    public T setWidth(int width) {
+        if (this.width != width) {
+            this.width = width;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 获取组件高度
+     */
+    public int getHeight() {
+        return height;
+    }
+
+    // ==========================================
+    // 坐标与属性访问器
+    // ==========================================
+
+    /**
+     * 设置组件高度。
+     *
+     * @param height 新高度
+     * @return 当前实例
+     */
+    public T setHeight(int height) {
+        if (this.height != height) {
+            this.height = height;
+            this.markLayoutDirty();
+            this.updateLayout();
+        }
+        return self();
+    }
+
+    /**
+     * 获取可见性
+     */
+    public boolean isVisible() {
+        return visible;
+    }
+
+    /**
+     * 设置可见性。
+     * 如果从可见变为不可见，会检查并释放可能悬挂的焦点/按压状态。
+     *
+     * @param visible true 可见
+     * @return 当前实例
+     */
+    public T setVisible(boolean visible) {
+        if (this.visible && !visible) this.checkAndReleaseZombieStates();
+        this.visible = visible;
+        return self();
+    }
+
+    public BaseUIElement<?> getParent() {
+        return parent;
+    }
+
+    private boolean mouseClickedFromFrameSnapshot(double mouseX, double mouseY, int button) {
+        for (int ordered = lastFrameCommandCount - 1; ordered >= 0; ordered--) {
+            int commandIndex = renderCommandBuffer.orderedIndexAt(ordered);
+            BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+            if (!element.visible || element.isCulledByScissor()) {
+                continue;
+            }
+            if (!isHitInCommandBounds(commandIndex, mouseX, mouseY)) {
+                continue;
+            }
+
+            double localX = mouseX - renderCommandBuffer.absXAt(commandIndex);
+            double localY = mouseY - renderCommandBuffer.absYAt(commandIndex);
+            if (element.focusable) {
+                element.requestFocus();
+            }
+            BaseUIRenderState.PRESS_TARGET = element;
+            return element.onClicked(localX, localY, button);
+        }
+        return false;
+    }
+
+    private boolean mouseScrolledFromFrameSnapshot(double mouseX, double mouseY, double delta) {
+        for (int ordered = lastFrameCommandCount - 1; ordered >= 0; ordered--) {
+            int commandIndex = renderCommandBuffer.orderedIndexAt(ordered);
+            BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+            if (!element.visible || element.isCulledByScissor()) {
+                continue;
+            }
+            if (!isHitInCommandBounds(commandIndex, mouseX, mouseY)) {
+                continue;
+            }
+            double localX = mouseX - renderCommandBuffer.absXAt(commandIndex);
+            double localY = mouseY - renderCommandBuffer.absYAt(commandIndex);
+            if (element.onScrolled(localX, localY, delta)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isHitInCommandBounds(int commandIndex, double mouseX, double mouseY) {
+        BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+        int left = renderCommandBuffer.absXAt(commandIndex);
+        int top = renderCommandBuffer.absYAt(commandIndex);
+        int right = left + element.width;
+        int bottom = top + element.height;
+        if (mouseX < left || mouseX >= right || mouseY < top || mouseY >= bottom) {
+            return false;
+        }
+
+        if (!renderCommandBuffer.hasClipAt(commandIndex)) {
+            return true;
+        }
+        return mouseX >= renderCommandBuffer.clipLAt(commandIndex)
+            && mouseY >= renderCommandBuffer.clipTAt(commandIndex)
+            && mouseX < renderCommandBuffer.clipRAt(commandIndex)
+            && mouseY < renderCommandBuffer.clipBAt(commandIndex);
+    }
+
+    private void markLayoutDirty() {
+        this.layoutDirty = true;
+        this.subtreeLayoutDirty = true;
+        BaseUIElement<?> p = this.parent;
+        while (p != null) {
+            p.subtreeLayoutDirty = true;
+            p = p.parent;
+        }
+    }
+
+    /**
+     * 锚点枚举，定义组件在父容器中的对齐位置。
+     * 例如：TOP_LEFT 表示左上角对齐，CENTER 表示中心对齐。
+     */
+    public enum UIAnchor {
+        TOP_LEFT, TOP_CENTER, TOP_RIGHT,
+        MIDDLE_LEFT, CENTER, MIDDLE_RIGHT,
+        BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
+    }
+
+}
