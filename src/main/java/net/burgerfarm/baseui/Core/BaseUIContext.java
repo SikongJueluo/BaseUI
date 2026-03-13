@@ -1,8 +1,8 @@
-package net.burgerfarm.baseui.Client.Render;
+package net.burgerfarm.baseui.Core;
 
 import net.minecraft.client.gui.GuiGraphics;
 
-public record BaseUIRenderContext(
+public record BaseUIContext(
     GuiGraphics graphics,
     double mouseX,
     double mouseY,

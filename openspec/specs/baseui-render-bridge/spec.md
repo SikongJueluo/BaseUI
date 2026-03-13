@@ -1,4 +1,4 @@
-# Spec: BaseUIRender 统一能力规范（Framework / Interface / Runtime）
+# Spec: BaseUIRenderBridge 统一能力规范（Framework / Interface / Runtime）
 
 ## Status
 
@@ -6,7 +6,7 @@ Draft
 
 ## Goal
 
-将 `BaseUIRender` 相关能力在**单一 capability 文件夹**内统一管理，消除跨文件夹重复定义，形成清晰且可追踪的三层规范：
+将 `BaseUIRenderBridge` 相关能力在**单一 capability 文件夹**内统一管理，消除跨文件夹重复定义，形成清晰且可追踪的三层规范：
 
 - Framework（框架定位与边界）
 - Interface（接口契约）
@@ -16,8 +16,8 @@ Draft
 
 当前里程碑覆盖：
 
-- `BaseUIRender` 的帧级协调定位与职责边界
-- `BaseUIRender` 最小接口契约与上下文契约
+- `BaseUIRenderBridge` 的帧级协调定位与职责边界
+- `BaseUIRenderBridge` 最小接口契约与上下文契约
 - `renderFrame` 运行时流水线、异常隔离与熔断行为
 
 当前里程碑不覆盖（MUST 作为 TODO/后续阶段能力）：
@@ -29,10 +29,10 @@ Draft
 
 ## Why
 
-### 为什么 BaseUIRender 必须定义为帧级协调层
+### 为什么 BaseUIRenderBridge 必须定义为帧级协调层
 
 - 现有 `BaseUIElement` 已承担树结构、布局、事件分发与递归渲染。
-- 若 `BaseUIRender` 再承担组件职责，会造成职责重叠并引发架构失焦。
+- 若 `BaseUIRenderBridge` 再承担组件职责，会造成职责重叠并引发架构失焦。
 
 ### 为什么要坚持 retained tree 连续性
 
@@ -101,15 +101,15 @@ Draft
 
 ## Requirements
 
-### Requirement: [Framework] BaseUIRender 必须是帧级渲染协调层
+### Requirement: [Framework] BaseUIRenderBridge 必须是帧级渲染协调层
 
-`BaseUIRender` MUST 被定义为客户端 UI 的帧级渲染协调层与 Screen/Forge 桥接边界，而不是新的组件基类。
+`BaseUIRenderBridge` MUST 被定义为客户端 UI 的帧级渲染协调层与 Screen/Forge 桥接边界，而不是新的组件基类。
 
 #### Scenario: 渲染入口分工
 
 - **Given** `BaseUIElement` 已承担组件树递归渲染与事件分发
-- **When** 框架定义 `BaseUIRender` 职责
-- **Then** `BaseUIRender` 应组织 Screen 到根节点的渲染/输入桥接与生命周期协调
+- **When** 框架定义 `BaseUIRenderBridge` 职责
+- **Then** `BaseUIRenderBridge` 应组织 Screen 到根节点的渲染/输入桥接与生命周期协调
 - **And** 不应重复承载布局树、子节点管理、焦点树遍历等 `BaseUIElement` 职责
 
 ### Requirement: [Framework] 框架必须保留 retained UI tree 连续性
@@ -119,8 +119,8 @@ Draft
 #### Scenario: 结构保持连续性
 
 - **Given** `BaseUIElement` 已提供 children/layout/focus/press/scissor/render recursion
-- **When** 设计 `BaseUIRender`
-- **Then** `BaseUIRender` 应作为 UI 树外层协调者
+- **When** 设计 `BaseUIRenderBridge`
+- **Then** `BaseUIRenderBridge` 应作为 UI 树外层协调者
 - **And** 不得破坏现有组件/容器演进路径
 
 ### Requirement: [Framework] 框架必须考虑全局 UI 状态安全释放
@@ -173,23 +173,23 @@ Draft
 - **THEN** 先采用组件级 dirty 标记
 - **AND** 高复杂度优化作为后续阶段扩展
 
-### Requirement: [Interface] BaseUIRender 必须提供最小接口契约集
+### Requirement: [Interface] BaseUIRenderBridge 必须提供最小接口契约集
 
-系统 MUST 为 `BaseUIRender` 定义最小接口契约集，至少覆盖帧渲染入口、输入转发入口、生命周期钩子与状态收尾入口；当前阶段 MUST 在保留契约的同时提供受控运行时实现。
+系统 MUST 为 `BaseUIRenderBridge` 定义最小接口契约集，至少覆盖帧渲染入口、输入转发入口、生命周期钩子与状态收尾入口；当前阶段 MUST 在保留契约的同时提供受控运行时实现。
 
 #### Scenario: 接口与实现共同交付
 
-- **WHEN** 团队推进 BaseUIRender 当前里程碑
+- **WHEN** 团队推进 BaseUIRenderBridge 当前里程碑
 - **THEN** 交付物必须包含接口定义、文档注释与对应运行时实现
 - **AND** 实现必须遵守接口职责边界
 
-### Requirement: [Interface] BaseUIRender 接口必须声明职责防线
+### Requirement: [Interface] BaseUIRenderBridge 接口必须声明职责防线
 
-`BaseUIRender` 接口 MUST 明确不接管 `BaseUIElement` 及布局容器既有职责，包括树递归渲染、布局算法、事件冒泡、焦点树与 press target 管理。
+`BaseUIRenderBridge` 接口 MUST 明确不接管 `BaseUIElement` 及布局容器既有职责，包括树递归渲染、布局算法、事件冒泡、焦点树与 press target 管理。
 
 #### Scenario: 防止职责吞并
 
-- **WHEN** 设计或扩展 BaseUIRender 接口
+- **WHEN** 设计或扩展 BaseUIRenderBridge 接口
 - **THEN** 接口语义只能描述帧级协调与桥接行为
 - **AND** 不得新增直接替代 UI 树职责的方法语义
 
@@ -213,9 +213,9 @@ Draft
 - **THEN** 必须以 TODO 形式显式标识为后续工作
 - **AND** 不得将 TODO 项纳入本期验收目标
 
-### Requirement: [Runtime] BaseUIRender runtime 必须提供确定帧流水线
+### Requirement: [Runtime] BaseUIRenderBridge runtime 必须提供确定帧流水线
 
-系统 MUST 提供 `BaseUIRender` 运行时实现，并在 `renderFrame` 中按固定顺序执行：前置检查、主渲染、帧后处理。
+系统 MUST 提供 `BaseUIRenderBridge` 运行时实现，并在 `renderFrame` 中按固定顺序执行：前置检查、主渲染、帧后处理。
 
 #### Scenario: 固定渲染顺序
 

@@ -1,10 +1,12 @@
-package net.burgerfarm.baseui.Client.Render;
+package net.burgerfarm.baseui.Client.RenderBridge;
+
+import net.burgerfarm.baseui.Core.BaseUIContext;
 
 /**
  * BaseUIRender 只负责 Screen/Forge 帧级协调。
  * MUST NOT 接管 BaseUIElement 树职责：布局、事件冒泡、焦点树、press target、递归渲染。
  */
-public interface BaseUIRender
+public interface BaseUIRenderBridge
         extends BaseUIRenderFrameEntry,
                 BaseUIRenderInputForwarding,
                 BaseUIRenderLifecycle,
@@ -20,31 +22,31 @@ public interface BaseUIRender
 }
 
 interface BaseUIRenderFrameEntry {
-    void renderFrame(BaseUIRenderContext context);
+    void renderFrame(BaseUIContext context);
 }
 
 interface BaseUIRenderInputForwarding {
-    void forwardMouseMoved(BaseUIRenderContext context, double mouseX, double mouseY);
+    void forwardMouseMoved(BaseUIContext context, double mouseX, double mouseY);
 
-    boolean forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+    boolean forwardMouseClicked(BaseUIContext context, double mouseX, double mouseY, int button);
 
-    boolean forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button);
+    boolean forwardMouseReleased(BaseUIContext context, double mouseX, double mouseY, int button);
 
     boolean forwardMouseDragged(
-            BaseUIRenderContext context,
+            BaseUIContext context,
             double mouseX,
             double mouseY,
             int button,
             double dragDeltaX,
             double dragDeltaY);
 
-    boolean forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta);
+    boolean forwardMouseScrolled(BaseUIContext context, double mouseX, double mouseY, double scrollDelta);
 
-    boolean forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+    boolean forwardKeyPressed(BaseUIContext context, int keyCode, int scanCode, int modifiers);
 
-    boolean forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers);
+    boolean forwardKeyReleased(BaseUIContext context, int keyCode, int scanCode, int modifiers);
 
-    boolean forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers);
+    boolean forwardCharTyped(BaseUIContext context, char codePoint, int modifiers);
 }
 
 interface BaseUIRenderLifecycle {

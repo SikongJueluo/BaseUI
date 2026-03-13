@@ -1,10 +1,11 @@
-package net.burgerfarm.baseui.Client.Render;
+package net.burgerfarm.baseui.Client.RenderBridge;
 
 import com.mojang.logging.LogUtils;
+import net.burgerfarm.baseui.Core.BaseUIContext;
 import net.burgerfarm.baseui.Core.BaseUIElement;
 import org.slf4j.Logger;
 
-public final class BaseUIRenderImpl implements BaseUIRender {
+public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final BaseUIElement<?> rootElement;
     private LifecycleState lifecycleState = LifecycleState.NEW;
@@ -12,7 +13,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     private boolean closeRequested = false;
     private int screenWidth = 0;
     private int screenHeight = 0;
-    public BaseUIRenderImpl(BaseUIElement<?> rootElement) {
+    public BaseUIClientRenderBridge(BaseUIElement<?> rootElement) {
         if (rootElement == null) {
             throw new IllegalArgumentException("rootElement cannot be null");
         }
@@ -20,7 +21,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public void renderFrame(BaseUIRenderContext context) {
+    public void renderFrame(BaseUIContext context) {
         if (context == null) {
             LOGGER.error("renderFrame skipped: context is null");
             return;
@@ -51,7 +52,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public void forwardMouseMoved(BaseUIRenderContext context, double mouseX, double mouseY) {
+    public void forwardMouseMoved(BaseUIContext context, double mouseX, double mouseY) {
         if (!isFrameInteractionAllowed(context)) {
             return;
         }
@@ -59,7 +60,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardMouseClicked(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
+    public boolean forwardMouseClicked(BaseUIContext context, double mouseX, double mouseY, int button) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -67,7 +68,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardMouseReleased(BaseUIRenderContext context, double mouseX, double mouseY, int button) {
+    public boolean forwardMouseReleased(BaseUIContext context, double mouseX, double mouseY, int button) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -76,7 +77,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
 
     @Override
     public boolean forwardMouseDragged(
-        BaseUIRenderContext context,
+        BaseUIContext context,
         double mouseX,
         double mouseY,
         int button,
@@ -89,7 +90,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardMouseScrolled(BaseUIRenderContext context, double mouseX, double mouseY, double scrollDelta) {
+    public boolean forwardMouseScrolled(BaseUIContext context, double mouseX, double mouseY, double scrollDelta) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -97,7 +98,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardKeyPressed(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
+    public boolean forwardKeyPressed(BaseUIContext context, int keyCode, int scanCode, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -105,7 +106,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardKeyReleased(BaseUIRenderContext context, int keyCode, int scanCode, int modifiers) {
+    public boolean forwardKeyReleased(BaseUIContext context, int keyCode, int scanCode, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -113,7 +114,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
     }
 
     @Override
-    public boolean forwardCharTyped(BaseUIRenderContext context, char codePoint, int modifiers) {
+    public boolean forwardCharTyped(BaseUIContext context, char codePoint, int modifiers) {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
@@ -222,7 +223,7 @@ public final class BaseUIRenderImpl implements BaseUIRender {
         }
     }
 
-    private boolean isFrameInteractionAllowed(BaseUIRenderContext context) {
+    private boolean isFrameInteractionAllowed(BaseUIContext context) {
         return context != null
             && lifecycleState == LifecycleState.INITIALIZED
             && !permanentlyFused

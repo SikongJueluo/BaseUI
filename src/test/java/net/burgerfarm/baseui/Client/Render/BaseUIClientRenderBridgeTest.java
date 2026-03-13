@@ -5,16 +5,18 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import net.burgerfarm.baseui.Core.BaseUIContext;
+import net.burgerfarm.baseui.Client.RenderBridge.BaseUIClientRenderBridge;
 import net.burgerfarm.baseui.Core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-class BaseUIRenderImplTest {
+class BaseUIClientRenderBridgeTest {
     @Test
     void initializeOnlyWorksFromNewAndIgnoresRepeatedCalls() {
         TestElement root = new TestElement();
-        BaseUIRenderImpl render = new BaseUIRenderImpl(root);
+        BaseUIClientRenderBridge render = new BaseUIClientRenderBridge(root);
 
         render.initialize(320, 240);
         assertEquals(320, root.getWidth());
@@ -28,7 +30,7 @@ class BaseUIRenderImplTest {
     @Test
     void resizeOnlyWorksWhenInitialized() {
         TestElement root = new TestElement();
-        BaseUIRenderImpl render = new BaseUIRenderImpl(root);
+        BaseUIClientRenderBridge render = new BaseUIClientRenderBridge(root);
 
         render.resize(500, 500);
         assertEquals(0, root.getWidth());
@@ -43,7 +45,7 @@ class BaseUIRenderImplTest {
     @Test
     void onCloseImmediatelyDisposesAndIsIdempotent() {
         TestElement root = new TestElement();
-        BaseUIRenderImpl render = new BaseUIRenderImpl(root);
+        BaseUIClientRenderBridge render = new BaseUIClientRenderBridge(root);
         render.initialize(320, 240);
 
         render.onClose();
@@ -56,9 +58,9 @@ class BaseUIRenderImplTest {
     @Test
     void preflightFailurePermanentlyFusesAndBlocksFutureFrames() {
         TestElement root = new TestElement();
-        BaseUIRenderImpl render = new BaseUIRenderImpl(root);
+        BaseUIClientRenderBridge render = new BaseUIClientRenderBridge(root);
 
-        BaseUIRenderContext context = buildContext();
+        BaseUIContext context = buildContext();
         render.renderFrame(context);
         render.renderFrame(context);
 
@@ -69,10 +71,10 @@ class BaseUIRenderImplTest {
     @Test
     void singleFrameExceptionRethrowsAndDoesNotBlockNextFrame() {
         ThrowOnceElement root = new ThrowOnceElement();
-        BaseUIRenderImpl render = new BaseUIRenderImpl(root);
+        BaseUIClientRenderBridge render = new BaseUIClientRenderBridge(root);
         render.initialize(320, 240);
 
-        BaseUIRenderContext context = buildContext();
+        BaseUIContext context = buildContext();
         assertThrows(IllegalStateException.class, () -> render.renderFrame(context));
         render.renderFrame(context);
 
@@ -81,9 +83,9 @@ class BaseUIRenderImplTest {
         assertTrue(root.isVisible());
     }
 
-    private static BaseUIRenderContext buildContext() {
+    private static BaseUIContext buildContext() {
         GuiGraphics graphics = Mockito.mock(GuiGraphics.class, Mockito.RETURNS_DEEP_STUBS);
-        return new BaseUIRenderContext(graphics, 12.0, 8.0, 0.5f, 320, 240, false);
+        return new BaseUIContext(graphics, 12.0, 8.0, 0.5f, 320, 240, false);
     }
 
     private static class TestElement extends BaseUIElement<TestElement> {

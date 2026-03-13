@@ -3,9 +3,9 @@ package net.burgerfarm.baseui.Client.Screens;
 import com.mojang.logging.LogUtils;
 import java.util.Objects;
 import java.util.function.Supplier;
-import net.burgerfarm.baseui.Client.Render.BaseUIRender;
-import net.burgerfarm.baseui.Client.Render.BaseUIRenderContext;
-import net.burgerfarm.baseui.Client.Render.BaseUIRenderImpl;
+import net.burgerfarm.baseui.Client.RenderBridge.BaseUIRenderBridge;
+import net.burgerfarm.baseui.Core.BaseUIContext;
+import net.burgerfarm.baseui.Client.RenderBridge.BaseUIClientRenderBridge;
 import net.burgerfarm.baseui.Core.BaseUIElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -13,30 +13,30 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 
-public final class BaseUIScreen extends Screen {
+public final class BaseUIClientScreen extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     private final Supplier<BaseUIElement<?>> rootFactory;
-    private final BaseUIScreenOptions options;
+    private final BaseUIClientScreenOptions options;
     private BaseUIElement<?> rootElement;
-    private BaseUIRender render;
+    private BaseUIRenderBridge render;
     private Throwable fallbackError;
     private boolean closed;
 
-    private BaseUIScreen(Supplier<BaseUIElement<?>> rootFactory, BaseUIScreenOptions options) {
+    private BaseUIClientScreen(Supplier<BaseUIElement<?>> rootFactory, BaseUIClientScreenOptions options) {
         super(Component.literal("BaseUI Screen"));
         this.rootFactory = Objects.requireNonNull(rootFactory, "rootFactory cannot be null");
-        this.options = options == null ? BaseUIScreenOptions.defaults() : options;
+        this.options = options == null ? BaseUIClientScreenOptions.defaults() : options;
     }
 
     public static void open(Supplier<BaseUIElement<?>> rootFactory) {
-        open(rootFactory, BaseUIScreenOptions.defaults());
+        open(rootFactory, BaseUIClientScreenOptions.defaults());
     }
 
-    public static void open(Supplier<BaseUIElement<?>> rootFactory, BaseUIScreenOptions options) {
+    public static void open(Supplier<BaseUIElement<?>> rootFactory, BaseUIClientScreenOptions options) {
         Objects.requireNonNull(rootFactory, "rootFactory cannot be null");
         Minecraft minecraft = Minecraft.getInstance();
-        Runnable openTask = () -> minecraft.setScreen(new BaseUIScreen(rootFactory, options));
+        Runnable openTask = () -> minecraft.setScreen(new BaseUIClientScreen(rootFactory, options));
         if (minecraft.isSameThread()) {
             openTask.run();
             return;
@@ -51,8 +51,8 @@ public final class BaseUIScreen extends Screen {
         }
         try {
             rootElement = Objects.requireNonNull(rootFactory.get(), "rootFactory produced null rootElement");
-            BaseUIRender customRender = options.createRender(rootElement);
-            render = customRender == null ? new BaseUIRenderImpl(rootElement) : customRender;
+            BaseUIRenderBridge customRender = options.createRender(rootElement);
+            render = customRender == null ? new BaseUIClientRenderBridge(rootElement) : customRender;
             render.initialize(this.width, this.height);
         } catch (RuntimeException ex) {
             enterFallback("init", ex);
@@ -91,7 +91,7 @@ public final class BaseUIScreen extends Screen {
         }
 
         try {
-            BaseUIRenderContext context = new BaseUIRenderContext(
+            BaseUIContext context = new BaseUIContext(
                 graphics,
                 mouseX,
                 mouseY,
@@ -222,8 +222,8 @@ public final class BaseUIScreen extends Screen {
         }
     }
 
-    private BaseUIRenderContext nullContext() {
-        return new BaseUIRenderContext(
+    private BaseUIContext nullContext() {
+        return new BaseUIContext(
             null,
             0,
             0,
