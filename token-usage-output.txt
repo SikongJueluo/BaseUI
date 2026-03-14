@@ -1,0 +1,126 @@
+═══════════════════════════════════════════════════════════════════════════
+Token Analysis: Session ses_31456d933ffe6W91nPGdb6ioV2
+Model: approx
+═══════════════════════════════════════════════════════════════════════════
+
+TOKEN BREAKDOWN BY CATEGORY
+─────────────────────────────────────────────────────────────────────────
+Estimated using tokenizer analysis of message content:
+
+Input Categories:
+  USER      █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░      2.1% (1,636)
+  TOOLS     █████████████████████████████░    97.9% (77,136)
+
+  Subtotal: 78,772 estimated input tokens
+
+Output Categories:
+  ASSISTANT ████░░░░░░░░░░░░░░░░░░░░░░░░░░     13.3% (2,884)
+  REASONING ██████████████████████████░░░░    86.7% (18,790)
+
+  Subtotal: 21,674 estimated output tokens
+
+Local Total: 100,446 tokens (estimated)
+
+TOOL USAGE BREAKDOWN
+─────────────────────────────────────────────────────────────────────────
+read                 █████████████████░░░░░░░░░░░░░    55.6% (42,913)   14x
+bash                 ████████████░░░░░░░░░░░░░░░░░░    39.9% (30,798)  111x
+glob                 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░      1.6% (1,260)    5x
+edit                 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░      1.5% (1,154)   23x
+write                ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        0.9% (695)    1x
+todowrite            ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        0.4% (279)    2x
+serena-common_replace_content ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░         0.0% (37)    1x
+
+TOP CONTRIBUTORS
+─────────────────────────────────────────────────────────────────────────
+• read                         42,913 tokens (42.7%)
+• bash                         30,798 tokens (30.7%)
+• Assistant#2                  1,459 tokens (1.5%)
+• User#1                       1,367 tokens (1.4%)
+• Assistant#1                  1,346 tokens (1.3%)
+
+═══════════════════════════════════════════════════════════════════════════
+MOST RECENT API CALL
+─────────────────────────────────────────────────────────────────────────
+
+Raw telemetry from last API response:
+  Input (fresh):          2,173 tokens
+  Cache read:            34,106 tokens
+  Output:                    73 tokens
+  ─────────────────────────────────────
+  Total:                 36,352 tokens
+
+═══════════════════════════════════════════════════════════════════════════
+SESSION TOTALS (All 162 API calls)
+─────────────────────────────────────────────────────────────────────────
+
+Total tokens processed across the entire session (for cost calculation):
+
+  Input tokens:       1,043,845 (fresh tokens across all calls)
+  Cache read:         9,457,952 (cached tokens across all calls)
+  Cache write:                0 (tokens written to cache)
+  Output tokens:         26,326 (all model responses)
+  ─────────────────────────────────────
+  Session Total:     10,528,123 tokens (for billing)
+
+═══════════════════════════════════════════════════════════════════════════
+ESTIMATED SESSION COST (API Key Pricing)
+─────────────────────────────────────────────────────────────────────────
+
+You appear to be on a subscription plan (API cost is $0).
+Here's what this session would cost with direct API access:
+
+  Input tokens:       1,043,845 × $1.00/M  = $1.0438
+  Output tokens:         26,326 × $3.00/M  = $0.0790
+─────────────────────────────────────────────────────────────────────────
+ESTIMATED TOTAL: $1.1228
+
+Note: This estimate uses standard API pricing from models.json.
+Actual API costs may vary based on provider and context size.
+
+═══════════════════════════════════════════════════════════════════════════
+TOOL DEFINITION COSTS (Estimated from argument analysis)
+─────────────────────────────────────────────────────────────────────────
+
+  Tool                Est. Tokens   Args   Complexity
+  ───────────────────────────────────────────────────────────────────
+  serena-common_replace_content         ~430       5   simple
+  edit                       ~400       4   simple
+  todowrite                  ~380       1   complex (arrays/objects)
+  question                   ~380       1   complex (arrays/objects)
+  read                       ~370       3   simple
+  bash                       ~340       2   simple
+  write                      ~340       2   simple
+  glob                       ~310       1   simple
+  tokenscope                 ~280       0   simple
+  ───────────────────────────────────────────────────────────────────
+  Total:             ~      3,230 tokens (9 enabled tools)
+
+  Note: Estimates inferred from tool call arguments in this session.
+        Actual schema tokens may vary +/-20%.
+
+═══════════════════════════════════════════════════════════════════════════
+CACHE EFFICIENCY
+─────────────────────────────────────────────────────────────────────────
+
+  Token Distribution:
+    Cache Read:         9,457,952 tokens   ███████████████████████████░░░  90.1%
+    Fresh Input:        1,043,845 tokens   ███░░░░░░░░░░░░░░░░░░░░░░░░░░░  9.9%
+  ───────────────────────────────────────────────────────────────────
+  Cache Hit Rate:      90.1%
+
+  Cost Analysis (approx @ $1.00/M input, $0.00/M cache read):
+    Without caching:   $10.5018  (10,501,797 tokens x $1.00/M)
+    With caching:      $1.0438  (fresh x $1.00/M + cached x $0.00/M)
+  ───────────────────────────────────────────────────────────────────
+  Cost Savings:        $9.4580  (90.1% reduction)
+  Effective Rate:      $0.10/M tokens  (vs. $1.00/M standard)
+
+═══════════════════════════════════════════════════════════════════════════
+SUMMARY
+─────────────────────────────────────────────────────────────────────────
+
+                          Cost        Tokens          API Calls
+  Session:           $    1.1228    10,528,123           162
+
+═══════════════════════════════════════════════════════════════════════════

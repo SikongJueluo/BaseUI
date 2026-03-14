@@ -1,10 +1,9 @@
 package net.burgerfarm.baseui.client;
 
 import net.burgerfarm.baseui.BaseUIMod;
+import net.burgerfarm.baseui.client.example.ExampleRootElement;
 import net.burgerfarm.baseui.client.screens.BaseUIClientScreen;
 import net.burgerfarm.baseui.commands.BaseUICommands;
-import net.burgerfarm.baseui.client.core.BaseUIElement;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -19,7 +18,7 @@ public final class ClientCommandEntrypoint {
     public static void onRegisterClientCommands(RegisterClientCommandsEvent event) {
         BaseUICommands.registerClient(
             event.getDispatcher(),
-            () -> BaseUIClientScreen.open(EmptyRootElement::new),
+            () -> BaseUIClientScreen.open(ExampleRootElement::new),
             ClientCommandEntrypoint::openFallbackOverlayTestScreen);
     }
 
@@ -28,10 +27,5 @@ public final class ClientCommandEntrypoint {
             throw new RuntimeException("Synthetic fallback test command failure");
         });
     }
-
-    private static final class EmptyRootElement extends BaseUIElement<EmptyRootElement> {
-        @Override
-        protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
-        }
-    }
 }
+
