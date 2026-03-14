@@ -530,7 +530,9 @@ public abstract class BaseUIElement {
 
         renderCommandBuffer.begin();
         // Use Integer.MIN_VALUE/MAX_VALUE as "no clip" sentinel - all on stack, zero GC
-        collectRenderCommands(renderCommandBuffer, parentMouseX, parentMouseY, parentAlpha, 0,
+        int initialAbsX = parent != null ? parent.getAbsoluteX() : 0;
+        int initialAbsY = parent != null ? parent.getAbsoluteY() : 0;
+        collectRenderCommands(renderCommandBuffer, parentMouseX, parentMouseY, initialAbsX, initialAbsY, parentAlpha, 0,
                               Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
         renderCommandBuffer.sortByLayerAndVisitOrder();
         lastFrameCommandCount = renderCommandBuffer.size();
@@ -543,6 +545,8 @@ public abstract class BaseUIElement {
         BaseUIRenderCommandBuffer commandBuffer,
         double parentMouseX,
         double parentMouseY,
+        int parentAbsX,
+        int parentAbsY,
         float parentAlpha,
         int parentGlobalZ,
         int parentClipL,
@@ -560,8 +564,8 @@ public abstract class BaseUIElement {
         double myInternalMouseY = parentMouseY - this.y;
 
         // 计算全局坐标和透明度
-        int absoluteX = getAbsoluteX();
-        int absoluteY = getAbsoluteY();
+        int absoluteX = parentAbsX + this.x;
+        int absoluteY = parentAbsY + this.y;
         int globalZ = parentGlobalZ + this.z;
         float finalAlpha = this.alpha * parentAlpha;
 
@@ -631,6 +635,8 @@ public abstract class BaseUIElement {
                 commandBuffer,
                 myInternalMouseX,
                 myInternalMouseY,
+                absoluteX,
+                absoluteY,
                 finalAlpha,
                 globalZ,
                 currentClipL,
