@@ -20,7 +20,7 @@ final class BaseUIRenderCommandBuffer {
     // 所有数组初始容量为64，超出后自动扩容（2倍）
 
     /** UI元素数组 */
-    private BaseUIElement<?>[] elements = new BaseUIElement[64];
+    private BaseUIElement[] elements = new BaseUIElement[64];
     /** 全局Z值，用于深度排序 */
     private int[] globalZ = new int[64];
     /** 稳定访问顺序，用于同Z值时的二级排序 */
@@ -91,7 +91,7 @@ final class BaseUIRenderCommandBuffer {
      * @return 添加元素的索引位置
      */
     int add(
-        BaseUIElement<?> element,
+        BaseUIElement element,
         int z,
         int x,
         int y,
@@ -178,7 +178,7 @@ final class BaseUIRenderCommandBuffer {
     /**
      * 获取指定索引的UI元素
      */
-    BaseUIElement<?> elementAt(int index) {
+    BaseUIElement elementAt(int index) {
         return elements[index];
     }
 

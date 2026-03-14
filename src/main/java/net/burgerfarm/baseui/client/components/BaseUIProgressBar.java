@@ -17,7 +17,7 @@ import java.util.function.Supplier;
  *
  * @see BaseUIElement
  */
-public class BaseUIProgressBar extends BaseUIElement<BaseUIProgressBar> {
+public class BaseUIProgressBar extends BaseUIElement {
 
     /**
      * 填充方向枚举。

@@ -14,7 +14,7 @@ import net.minecraft.sounds.SoundEvents;
  * BaseUI 基础交互组件：按钮
  * 集成：防穿透事件吞噬、文字自动排版(AutoSize)、安全的无状态音效触发。
  */
-public class BaseUIButton extends BaseUIElement<BaseUIButton> {
+public class BaseUIButton extends BaseUIElement {
 
     private static final int FALLBACK_BASE_ALPHA = 0x88;
 

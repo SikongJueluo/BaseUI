@@ -16,7 +16,7 @@ import java.util.List;
  * 网格不会自动重新排列！您需要手动调用 {@link #rearrangeGrid()} 来更新布局。
  * 这是为了性能考虑，避免不必要的重排。
  */
-public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
+public class BaseUIGrid extends BaseUIElement {
 
     /** 网格列数，至少为1 */
     private int columns = 1;
@@ -103,7 +103,7 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * @return 自身实例（链式调用）
      */
     @Override
-    public BaseUIGrid addChild(BaseUIElement<?> child) {
+    public BaseUIGrid addChild(BaseUIElement child) {
         super.addChild(child);
         this.rearrangeGrid();
         return this;
@@ -114,8 +114,8 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * @param newChildren 要添加的子组件数组
      * @return 自身实例（链式调用）
      */
-    public BaseUIGrid addChildren(BaseUIElement<?>... newChildren) {
-        for (BaseUIElement<?> child : newChildren) {
+    public BaseUIGrid addChildren(BaseUIElement... newChildren) {
+        for (BaseUIElement child : newChildren) {
             super.addChild(child);
         }
         this.rearrangeGrid(); // 所有子组件挂载完毕后，仅执行一次终极排版！
@@ -127,8 +127,8 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * @param newChildren 要添加的子组件集合
      * @return 自身实例（链式调用）
      */
-    public BaseUIGrid addChildren(Iterable<? extends BaseUIElement<?>> newChildren) {
-        for (BaseUIElement<?> child : newChildren) {
+    public BaseUIGrid addChildren(Iterable<? extends BaseUIElement> newChildren) {
+        for (BaseUIElement child : newChildren) {
             super.addChild(child);
         }
         this.rearrangeGrid();
@@ -141,7 +141,7 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * @return 自身实例（链式调用）
      */
     @Override
-    public BaseUIGrid removeChild(BaseUIElement<?> child) {
+    public BaseUIGrid removeChild(BaseUIElement child) {
         super.removeChild(child);
         this.rearrangeGrid();
         return this;
@@ -167,8 +167,8 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * 当网格自身因为父容器缩放而发生坐标变化时，强制内部元素重新流式对齐。
      */
     @Override
-    public void updateLayout() {
-        super.updateLayout(); // 先让基类算出网格自己的绝对 X 和 Y
+    protected void afterLayoutPass() {
+        
         this.rearrangeGrid(); // 再根据新的宽高重新排列内部物品
     }
 
@@ -191,9 +191,9 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
         int colIndex = 0;
 
         // 【安全防线升级】引入浅拷贝迭代，彻底杜绝极小概率的并发修改异常！
-        List<BaseUIElement<?>> safeChildren = new ArrayList<>(this.children);
+        List<BaseUIElement> safeChildren = new ArrayList<>(this.children);
 
-        for (BaseUIElement<?> child : safeChildren) {
+        for (BaseUIElement child : safeChildren) {
             if (!child.isVisible()) continue;
 
             // 利用 V13.1 的锚点引擎：强制相对于网格左上角偏移

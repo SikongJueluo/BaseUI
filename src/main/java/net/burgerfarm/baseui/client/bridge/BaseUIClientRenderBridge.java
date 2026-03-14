@@ -3,35 +3,45 @@ package net.burgerfarm.baseui.client.bridge;
 import com.mojang.logging.LogUtils;
 import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
+import net.burgerfarm.baseui.client.core.BaseUIPerformanceMetrics;
+import net.burgerfarm.baseui.client.core.UILayoutEngine;
+import net.burgerfarm.baseui.client.core.UIEventDispatcher;
 import org.slf4j.Logger;
 
 public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private final BaseUIElement<?> rootElement;
+    private final BaseUIElement rootElement;
+    private final UIEventDispatcher eventDispatcher;
+    private final BaseUIPerformanceMetrics performanceMetrics = new BaseUIPerformanceMetrics();
     private LifecycleState lifecycleState = LifecycleState.NEW;
     private boolean permanentlyFused = false;
     private boolean closeRequested = false;
     private int screenWidth = 0;
     private int screenHeight = 0;
-    public BaseUIClientRenderBridge(BaseUIElement<?> rootElement) {
+    public BaseUIClientRenderBridge(BaseUIElement rootElement) {
         if (rootElement == null) {
             throw new IllegalArgumentException("rootElement cannot be null");
         }
         this.rootElement = rootElement;
+        this.eventDispatcher = new UIEventDispatcher(rootElement);
+        BaseUIElement.setGlobalMetrics(this.performanceMetrics);
     }
 
     @Override
     public void renderFrame(BaseUIContext context) {
         if (context == null) {
             LOGGER.error("renderFrame skipped: context is null");
+            performanceMetrics.recordFrameAbort("context is null");
             return;
         }
 
         if (permanentlyFused || lifecycleState == LifecycleState.DISPOSED) {
+            performanceMetrics.recordFrameAbort("permanently fused or disposed");
             return;
         }
 
         if (!runPreflightChecks()) {
+            performanceMetrics.recordFrameAbort("preflight checks failed");
             fuseAndCleanup("preflight checks failed", null);
             return;
         }
@@ -45,7 +55,10 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
                 context.mouseY(),
                 context.partialTick(),
                 1.0f);
+            
+            eventDispatcher.updateSnapshot(rootElement.getRenderCommandBuffer(), rootElement.getLastFrameCommandCount());
         } catch (RuntimeException ex) {
+            performanceMetrics.recordFrameException("render", ex);
             LOGGER.error("renderFrame runtime exception; stage=render width={} height={} debug={} frame aborted", context.screenWidth(), context.screenHeight(), context.debugEnabled(), ex);
             return;
         }
@@ -58,7 +71,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return;
         }
-        rootElement.mouseMoved(mouseX, mouseY);
+        eventDispatcher.mouseMoved(mouseX, mouseY);
     }
 
     @Override
@@ -66,7 +79,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.mouseClicked(mouseX, mouseY, button);
+        return eventDispatcher.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
@@ -74,7 +87,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.mouseReleased(mouseX, mouseY, button);
+        return eventDispatcher.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -88,7 +101,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.mouseDragged(mouseX, mouseY, button, dragDeltaX, dragDeltaY);
+        return eventDispatcher.mouseDragged(mouseX, mouseY, button, dragDeltaX, dragDeltaY);
     }
 
     @Override
@@ -96,7 +109,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.mouseScrolled(mouseX, mouseY, scrollDelta);
+        return eventDispatcher.mouseScrolled(mouseX, mouseY, scrollDelta);
     }
 
     @Override
@@ -104,7 +117,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.keyPressed(keyCode, scanCode, modifiers);
+        return eventDispatcher.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -112,7 +125,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.keyReleased(keyCode, scanCode, modifiers);
+        return eventDispatcher.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override
@@ -120,7 +133,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         if (!isFrameInteractionAllowed(context)) {
             return false;
         }
-        return rootElement.charTyped(codePoint, modifiers);
+        return eventDispatcher.charTyped(codePoint, modifiers);
     }
 
     @Override
@@ -132,7 +145,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         this.screenWidth = Math.max(0, width);
         this.screenHeight = Math.max(0, height);
         rootElement.setSize(this.screenWidth, this.screenHeight);
-        rootElement.updateLayout();
+        UILayoutEngine.updateLayout(rootElement);
         lifecycleState = LifecycleState.INITIALIZED;
     }
 
@@ -145,7 +158,7 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         this.screenWidth = Math.max(0, width);
         this.screenHeight = Math.max(0, height);
         rootElement.setSize(this.screenWidth, this.screenHeight);
-        rootElement.updateLayout();
+        UILayoutEngine.updateLayout(rootElement);
     }
 
     @Override
@@ -244,6 +257,10 @@ public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {
         } catch (RuntimeException ex) {
             LOGGER.error("dispose failed while handling permanent fuse", ex);
         }
+    }
+
+    public BaseUIPerformanceMetrics getPerformanceMetrics() {
+        return performanceMetrics;
     }
 
     private enum LifecycleState {

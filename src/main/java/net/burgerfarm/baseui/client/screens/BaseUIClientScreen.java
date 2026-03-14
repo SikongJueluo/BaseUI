@@ -16,24 +16,24 @@ import org.slf4j.Logger;
 public final class BaseUIClientScreen extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private final Supplier<BaseUIElement<?>> rootFactory;
+    private final Supplier<BaseUIElement> rootFactory;
     private final BaseUIClientScreenOptions options;
-    private BaseUIElement<?> rootElement;
+    private BaseUIElement rootElement;
     private BaseUIRenderBridge render;
     private Throwable fallbackError;
     private boolean closed;
 
-    private BaseUIClientScreen(Supplier<BaseUIElement<?>> rootFactory, BaseUIClientScreenOptions options) {
+    private BaseUIClientScreen(Supplier<BaseUIElement> rootFactory, BaseUIClientScreenOptions options) {
         super(Component.literal("BaseUI Screen"));
         this.rootFactory = Objects.requireNonNull(rootFactory, "rootFactory cannot be null");
         this.options = options == null ? BaseUIClientScreenOptions.defaults() : options;
     }
 
-    public static void open(Supplier<BaseUIElement<?>> rootFactory) {
+    public static void open(Supplier<BaseUIElement> rootFactory) {
         open(rootFactory, BaseUIClientScreenOptions.defaults());
     }
 
-    public static void open(Supplier<BaseUIElement<?>> rootFactory, BaseUIClientScreenOptions options) {
+    public static void open(Supplier<BaseUIElement> rootFactory, BaseUIClientScreenOptions options) {
         Objects.requireNonNull(rootFactory, "rootFactory cannot be null");
         Minecraft minecraft = Minecraft.getInstance();
         Runnable openTask = () -> minecraft.setScreen(new BaseUIClientScreen(rootFactory, options));

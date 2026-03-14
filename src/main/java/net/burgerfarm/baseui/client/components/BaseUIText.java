@@ -20,7 +20,7 @@ import java.util.function.Supplier;
  *
  * @see BaseUIElement
  */
-public class BaseUIText extends BaseUIElement<BaseUIText> {
+public class BaseUIText extends BaseUIElement {
 
     /**
      * 文本对齐方式枚举。
