@@ -1,12 +1,12 @@
-package net.burgerfarm.baseui.client.Screens;
+package net.burgerfarm.baseui.client.screens;
 
 import com.mojang.logging.LogUtils;
 import java.util.Objects;
 import java.util.function.Supplier;
-import net.burgerfarm.baseui.client.RenderBridge.BaseUIRenderBridge;
-import net.burgerfarm.baseui.core.BaseUIContext;
-import net.burgerfarm.baseui.client.RenderBridge.BaseUIClientRenderBridge;
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.bridge.BaseUIRenderBridge;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
+import net.burgerfarm.baseui.client.bridge.BaseUIClientRenderBridge;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;

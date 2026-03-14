@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.core;
+package net.burgerfarm.baseui.client.core;
 
 /**
  * UI渲染状态管理器

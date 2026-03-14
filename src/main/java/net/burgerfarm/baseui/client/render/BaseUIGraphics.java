@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.render;
+package net.burgerfarm.baseui.client.render;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;

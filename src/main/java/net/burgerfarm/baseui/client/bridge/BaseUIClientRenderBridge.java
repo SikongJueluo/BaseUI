@@ -1,8 +1,8 @@
-package net.burgerfarm.baseui.client.RenderBridge;
+package net.burgerfarm.baseui.client.bridge;
 
 import com.mojang.logging.LogUtils;
-import net.burgerfarm.baseui.core.BaseUIContext;
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 import org.slf4j.Logger;
 
 public final class BaseUIClientRenderBridge implements BaseUIRenderBridge {

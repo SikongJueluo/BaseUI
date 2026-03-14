@@ -10,9 +10,9 @@ import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.burgerfarm.baseui.core.BaseUIContext;
-import net.burgerfarm.baseui.client.RenderBridge.BaseUIClientRenderBridge;
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
+import net.burgerfarm.baseui.client.bridge.BaseUIClientRenderBridge;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

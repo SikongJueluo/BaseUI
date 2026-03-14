@@ -1,9 +1,9 @@
-package net.burgerfarm.baseui.client.Screens;
+package net.burgerfarm.baseui.client.screens;
 
 import java.util.Objects;
 import java.util.function.Function;
-import net.burgerfarm.baseui.client.RenderBridge.BaseUIRenderBridge;
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.bridge.BaseUIRenderBridge;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 
 public final class BaseUIClientScreenOptions {
     private static final BaseUIClientScreenOptions DEFAULTS = new BaseUIClientScreenOptions(

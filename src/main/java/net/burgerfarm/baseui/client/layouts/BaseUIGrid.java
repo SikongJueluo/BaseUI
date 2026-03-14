@@ -1,6 +1,6 @@
-package net.burgerfarm.baseui.layouts;
+package net.burgerfarm.baseui.client.layouts;
 
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import java.util.ArrayList;
 import java.util.List;

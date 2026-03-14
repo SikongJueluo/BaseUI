@@ -1,6 +1,6 @@
-package net.burgerfarm.baseui.client.RenderBridge;
+package net.burgerfarm.baseui.client.bridge;
 
-import net.burgerfarm.baseui.core.BaseUIContext;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 
 /**
  * BaseUIRender 只负责 Screen/Forge 帧级协调。

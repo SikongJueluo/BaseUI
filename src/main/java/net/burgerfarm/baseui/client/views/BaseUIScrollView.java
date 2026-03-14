@@ -1,7 +1,7 @@
-package net.burgerfarm.baseui.views;
+package net.burgerfarm.baseui.client.views;
 
-import net.burgerfarm.baseui.components.BaseUISlider;
-import net.burgerfarm.baseui.core.BaseUIElement;
+import net.burgerfarm.baseui.client.components.BaseUISlider;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import java.util.ArrayList;
 import java.util.List;
