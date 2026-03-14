@@ -1,11 +1,11 @@
 package net.burgerfarm.baseui.client.containers;
 
 import net.burgerfarm.baseui.client.components.BaseUIButton;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.burgerfarm.baseui.client.layouts.BaseUIGrid;
 import net.burgerfarm.baseui.client.render.BaseUINineSliceTexture;
 import net.burgerfarm.baseui.client.views.BaseUIScrollView;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -418,12 +418,8 @@ public class BaseUIButtonList extends BaseUIElement<BaseUIButtonList> {
     /**
      * 自身绘制方法为空，因为所有视觉内容均由子组件（按钮、滚动条）提供。
      *
-     * @param graphics    绘图对象
-     * @param mouseX      鼠标相对于当前组件的 X 坐标
-     * @param mouseY      鼠标相对于当前组件的 Y 坐标
-     * @param partialTick 部分 tick
      * @param finalAlpha  最终透明度
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {}
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {}
 }

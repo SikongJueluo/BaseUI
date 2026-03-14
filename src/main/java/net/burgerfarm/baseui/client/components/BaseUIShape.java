@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
@@ -212,19 +213,17 @@ public class BaseUIShape extends BaseUIElement<BaseUIShape> {
 
     /**
      * 绘制异形图形。
-     * @param graphics    绘图对象
-     * @param mouseX      鼠标相对于当前组件的 X 坐标
-     * @param mouseY      鼠标相对于当前组件的 Y 坐标
-     * @param partialTick 部分 tick
      * @param finalAlpha  最终透明度
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
         if (vertexCount == 0 || finalAlpha <= 0.0F) return;
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
+
+        GuiGraphics graphics = context.graphics;
 
         Tesselator tesselator = Tesselator.getInstance();
         BufferBuilder builder = tesselator.getBuilder();

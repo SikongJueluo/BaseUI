@@ -1,8 +1,9 @@
 package net.burgerfarm.baseui.client.views;
 
 import net.burgerfarm.baseui.client.components.BaseUISlider;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
-import net.minecraft.client.gui.GuiGraphics;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,7 +63,7 @@ public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
      */
     private static class ScrollContent extends BaseUIElement<ScrollContent> {
         @Override
-        protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+        protected void drawSelf(BaseUIContext context, float finalAlpha) {
             // 画布本身是透明的，不渲染任何东西
         }
     }
@@ -328,7 +329,7 @@ public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
      * 自身绘制方法为空，因为滚动视口本身不渲染内容（所有内容由子组件绘制）。
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
         // 背景留空
     }
 }

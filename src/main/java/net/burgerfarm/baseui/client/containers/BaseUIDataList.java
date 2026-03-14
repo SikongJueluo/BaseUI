@@ -1,9 +1,9 @@
 package net.burgerfarm.baseui.client.containers;
 
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.burgerfarm.baseui.client.layouts.BaseUIGrid;
 import net.burgerfarm.baseui.client.views.BaseUIScrollView;
-import net.minecraft.client.gui.GuiGraphics;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -287,14 +287,10 @@ public class BaseUIDataList<T> extends BaseUIElement<BaseUIDataList<T>> {
 
     /**
      * 自身绘制方法为空，因为列表本身不需要渲染背景。
-     * @param graphics    绘图对象
-     * @param mouseX      鼠标相对于当前组件的 X 坐标
-     * @param mouseY      鼠标相对于当前组件的 Y 坐标
-     * @param partialTick 部分 tick
      * @param finalAlpha  最终透明度
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
         // 表格自身作为容器，不需要渲染背景
     }
 }

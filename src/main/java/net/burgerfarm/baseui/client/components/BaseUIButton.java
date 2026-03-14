@@ -1,6 +1,7 @@
 package net.burgerfarm.baseui.client.components;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.burgerfarm.baseui.client.render.BaseUINineSliceTexture;
 import net.minecraft.client.Minecraft;
@@ -139,7 +140,9 @@ public class BaseUIButton extends BaseUIElement<BaseUIButton> {
     // 视觉与听觉渲染管线
     // ==========================================
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
+
+        GuiGraphics graphics = context.graphics;
 
         boolean currentHover = isHovered();
 

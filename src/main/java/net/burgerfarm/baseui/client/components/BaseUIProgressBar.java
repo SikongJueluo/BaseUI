@@ -1,5 +1,6 @@
 package net.burgerfarm.baseui.client.components;
 
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.burgerfarm.baseui.client.render.BaseUINineSliceTexture;
 import net.minecraft.client.gui.GuiGraphics;
@@ -211,14 +212,12 @@ public class BaseUIProgressBar extends BaseUIElement<BaseUIProgressBar> {
     /**
      * 绘制进度条自身。
      *
-     * @param graphics    绘图对象
-     * @param mouseX      鼠标相对于当前组件的 X 坐标（此处未使用）
-     * @param mouseY      鼠标相对于当前组件的 Y 坐标（此处未使用）
-     * @param partialTick 部分 tick（用于动画，此处未使用）
      * @param finalAlpha  最终透明度（已乘父级透明度）
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
+
+        GuiGraphics graphics = context.graphics;
 
         // 1. 绘制背景
         if (bgTexture != null) {

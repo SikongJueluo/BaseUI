@@ -1,6 +1,7 @@
 package net.burgerfarm.baseui.client.components;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
 import net.burgerfarm.baseui.client.render.BaseUINineSliceTexture;
 import net.minecraft.client.Minecraft;
@@ -110,7 +111,9 @@ public class BaseUISlider extends BaseUIElement<BaseUISlider> {
     // 视觉渲染管线 (双向适配)
     // ==========================================
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
+        GuiGraphics graphics = context.graphics;
+
         // 1. 绘制轨道
         if (trackTex != null) {
             trackTex.render(graphics, 0, 0, this.width, this.height, finalAlpha);

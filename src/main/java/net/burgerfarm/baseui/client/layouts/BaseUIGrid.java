@@ -1,7 +1,7 @@
 package net.burgerfarm.baseui.client.layouts;
 
+import net.burgerfarm.baseui.client.core.BaseUIContext;
 import net.burgerfarm.baseui.client.core.BaseUIElement;
-import net.minecraft.client.gui.GuiGraphics;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -229,7 +229,7 @@ public class BaseUIGrid extends BaseUIElement<BaseUIGrid> {
      * 若需要调试边框，可在此处临时添加 fill 调用。
      */
     @Override
-    protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
+    protected void drawSelf(BaseUIContext context, float finalAlpha) {
         // 背景留空
     }
 }

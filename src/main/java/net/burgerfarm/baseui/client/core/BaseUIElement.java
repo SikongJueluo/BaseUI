@@ -498,47 +498,47 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
     /**
      * 渲染组件的入口方法。不可被重写，它处理了剪裁、坐标变换、状态传递和安全迭代。
-     * 子类应实现 {@link #drawSelf(GuiGraphics, int, int, float, float)} 来绘制自身内容。
+     * 子类应实现 {@link #drawSelf(BaseUIContext, float)} 来绘制自身内容。
      *
-     * @param graphics     Minecraft 的绘图对象
-     * @param parentMouseX 鼠标相对于父组件的 X 坐标
-     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
-     * @param partialTick  部分 tick，用于平滑动画
      * @param parentAlpha  父组件传递下来的累积透明度
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
-    public final void render(GuiGraphics graphics, double parentMouseX, double parentMouseY, float partialTick, float parentAlpha) {
+    public final void render(BaseUIContext context, float parentAlpha) {
         if (!visible || this.alpha <= 0.0f || culledByScissor) return;
 
-        // 转换为相对于当前组件的鼠标坐标
-        double myInternalMouseX = parentMouseX - this.x;
-        double myInternalMouseY = parentMouseY - this.y;
+        // 获取屏幕绝对坐标
+        int absX = this.getAbsoluteX();
+        int absY = this.getAbsoluteY();
+        double absoluteMouseX = context.mouseX;
+        double absoluteMouseY = context.mouseY;
 
-        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
-                parentMouseY >= this.y && parentMouseY < this.y + this.height);
+        // 碰撞检测
+        boolean hit = (absoluteMouseX >= absX && absoluteMouseX < absX + this.width &&
+                absoluteMouseY >= absY && absoluteMouseY < absY + this.height);
 
         // 判断鼠标是否被父级的 Scissor 裁剪区挡住(防意外穿透)
         if (hit && !UIState.SCISSOR_STACK.isEmpty()) {
-            double absMouseX = this.getAbsoluteX() + myInternalMouseX;
-            double absMouseY = this.getAbsoluteY() + myInternalMouseY;
             int[] scissor = UIState.SCISSOR_STACK.peek();
             // 如果鼠标在物理上处于当前限制的裁切框之外，强制取消悬停
-            if (absMouseX < scissor[0] || absMouseY < scissor[1] || absMouseX >= scissor[2] || absMouseY >= scissor[3]) {
+            if (absoluteMouseX < scissor[0] || absoluteMouseY < scissor[1] || absoluteMouseX >= scissor[2] || absoluteMouseY >= scissor[3]) {
                 hit = false;
             }
         }
+
+        // 从上下文中提取 Graphics
+        GuiGraphics graphics = context.graphics;
 
         this.isHoveredForRender = hit;
 
         float finalAlpha = this.alpha * parentAlpha;
 
         graphics.pose().pushPose();
+        // OpenGL 矩阵平移仍然需要用局部的相对坐标 (this.x, this.y)
         graphics.pose().translate(this.x, this.y, this.z);
 
         boolean pushedScissor = false;
         try {
             if (clipToBounds) {
-                int absX = getAbsoluteX(), absY = getAbsoluteY();
                 int[] currentRect = {absX, absY, absX + width, absY + height};
                 // 与父级剪裁区域求交集
                 if (!UIState.SCISSOR_STACK.isEmpty()) {
@@ -554,13 +554,13 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
             }
 
             // 绘制自身内容
-            drawSelf(graphics, (int)myInternalMouseX, (int)myInternalMouseY, partialTick, finalAlpha);
+            drawSelf(context, finalAlpha);
 
             // 保持安全迭代，拒绝 ConcurrentModificationException 崩溃！
             // 直接使用缓存列表进行遍历，消除 render 阶段的 GC 内存分配
             List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
             for (int i = 0; i < safeChildren.size(); i++) {
-                safeChildren.get(i).render(graphics, myInternalMouseX, myInternalMouseY, partialTick, finalAlpha);
+                safeChildren.get(i).render(context, finalAlpha);
             }
         } finally {
             if (pushedScissor) {
@@ -579,13 +579,9 @@ public abstract class BaseUIElement<T extends BaseUIElement<T>> {
      * 子类实现此方法以绘制自身内容。
      * 注意：坐标已经平移至组件原点，鼠标坐标已转换为相对于组件的内部坐标。
      *
-     * @param graphics    绘图对象
-     * @param mouseX      鼠标相对于当前组件的 X 坐标
-     * @param mouseY      鼠标相对于当前组件的 Y 坐标
-     * @param partialTick 部分 tick
      * @param finalAlpha  最终透明度（已乘父级透明度）
      */
-    protected abstract void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha);
+    protected abstract void drawSelf(BaseUIContext context, float finalAlpha);
 
     /**
      * 鼠标点击事件处理入口。
