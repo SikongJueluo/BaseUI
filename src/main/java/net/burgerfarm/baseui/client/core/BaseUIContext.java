@@ -25,6 +25,7 @@ import net.minecraft.client.gui.GuiGraphics;
  * @param screenHeight 屏幕高度
  * @param debugEnabled 是否启用调试信息
  */
+
 public record BaseUIContext(
     GuiGraphics graphics,
     double mouseX,
