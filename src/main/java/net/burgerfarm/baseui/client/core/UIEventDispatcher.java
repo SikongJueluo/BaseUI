@@ -23,9 +23,7 @@ public class UIEventDispatcher {
                 return true;
             }
         }
-        int initialAbsX = root != null && root.getParent() != null ? root.getParent().getAbsoluteX() : 0;
-        int initialAbsY = root != null && root.getParent() != null ? root.getParent().getAbsoluteY() : 0;
-        return routeMouseClicked(root, mouseX, mouseY, button, mouseX, mouseY, initialAbsX, initialAbsY, false, 0, 0, 0, 0);
+        return routeMouseClicked(root, mouseX, mouseY, button);
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
@@ -46,9 +44,7 @@ public class UIEventDispatcher {
     }
 
     public void mouseMoved(double mouseX, double mouseY) {
-        int initialAbsX = root != null && root.getParent() != null ? root.getParent().getAbsoluteX() : 0;
-        int initialAbsY = root != null && root.getParent() != null ? root.getParent().getAbsoluteY() : 0;
-        routeMouseMoved(root, mouseX, mouseY, mouseX, mouseY, initialAbsX, initialAbsY, false, 0, 0, 0, 0);
+        routeMouseMoved(root, mouseX, mouseY);
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
@@ -57,9 +53,7 @@ public class UIEventDispatcher {
                 return true;
             }
         }
-        int initialAbsX = root != null && root.getParent() != null ? root.getParent().getAbsoluteX() : 0;
-        int initialAbsY = root != null && root.getParent() != null ? root.getParent().getAbsoluteY() : 0;
-        return routeMouseScrolled(root, mouseX, mouseY, delta, mouseX, mouseY, initialAbsX, initialAbsY, false, 0, 0, 0, 0);
+        return routeMouseScrolled(root, mouseX, mouseY, delta);
     }
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -74,55 +68,20 @@ public class UIEventDispatcher {
         return routeCharTyped(root, codePoint, modifiers);
     }
 
-    private boolean isHit(BaseUIElement element, double parentMouseX, double parentMouseY, double absMouseX, double absMouseY, boolean hasClip, int clipL, int clipT, int clipR, int clipB) {
-        boolean hit = (parentMouseX >= element.getX() && parentMouseX < element.getX() + element.getWidth() &&
-            parentMouseY >= element.getY() && parentMouseY < element.getY() + element.getHeight());
-        if (hit && hasClip) {
-            if (absMouseX < clipL || absMouseY < clipT || absMouseX >= clipR || absMouseY >= clipB) {
-                hit = false;
-            }
-        }
-        return hit;
-    }
-
-    private boolean routeMouseClicked(BaseUIElement element, double parentMouseX, double parentMouseY, int button,
-                                      double absMouseX, double absMouseY, int absX, int absY,
-                                      boolean hasClip, int clipL, int clipT, int clipR, int clipB) {
+    private boolean routeMouseClicked(BaseUIElement element, double parentMouseX, double parentMouseY, int button) {
         if (!element.isVisible() || element.isCulledByScissor()) return false;
         
-        int myAbsL = absX + element.getX();
-        int myAbsT = absY + element.getY();
-
-        boolean hit = isHit(element, parentMouseX, parentMouseY, absMouseX, absMouseY, hasClip, clipL, clipT, clipR, clipB);
+        boolean hit = (parentMouseX >= element.getX() && parentMouseX < element.getX() + element.getWidth() &&
+            parentMouseY >= element.getY() && parentMouseY < element.getY() + element.getHeight());
 
         if (element.clipToBounds && !hit) return false;
-
-        int nextClipL = clipL;
-        int nextClipT = clipT;
-        int nextClipR = clipR;
-        int nextClipB = clipB;
-        boolean nextHasClip = hasClip;
-
-        if (element.clipToBounds) {
-            nextHasClip = true;
-            int myAbsR = myAbsL + element.getWidth();
-            int myAbsB = myAbsT + element.getHeight();
-            nextClipL = hasClip ? Math.max(clipL, myAbsL) : myAbsL;
-            nextClipT = hasClip ? Math.max(clipT, myAbsT) : myAbsT;
-            nextClipR = hasClip ? Math.min(clipR, myAbsR) : myAbsR;
-            nextClipB = hasClip ? Math.min(clipB, myAbsB) : myAbsB;
-        }
 
         double internalX = parentMouseX - element.getX();
         double internalY = parentMouseY - element.getY();
 
         List<BaseUIElement> safeChildren = element.getChildren();
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
-            if (routeMouseClicked(safeChildren.get(i), internalX, internalY, button,
-                                  absMouseX, absMouseY, myAbsL, myAbsT,
-                                  nextHasClip, nextClipL, nextClipT, nextClipR, nextClipB)) {
-                return true;
-            }
+            if (routeMouseClicked(safeChildren.get(i), internalX, internalY, button)) return true;
         }
 
         if (hit) {
@@ -157,33 +116,13 @@ public class UIEventDispatcher {
         return element.onDragged(internalX, internalY, button, dragX, dragY);
     }
 
-    private void routeMouseMoved(BaseUIElement element, double parentMouseX, double parentMouseY,
-                                 double absMouseX, double absMouseY, int absX, int absY,
-                                 boolean hasClip, int clipL, int clipT, int clipR, int clipB) {
+    private void routeMouseMoved(BaseUIElement element, double parentMouseX, double parentMouseY) {
         if (!element.isVisible() || element.isCulledByScissor()) return;
         
-        int myAbsL = absX + element.getX();
-        int myAbsT = absY + element.getY();
-
-        boolean hit = isHit(element, parentMouseX, parentMouseY, absMouseX, absMouseY, hasClip, clipL, clipT, clipR, clipB);
+        boolean hit = (parentMouseX >= element.getX() && parentMouseX < element.getX() + element.getWidth() &&
+            parentMouseY >= element.getY() && parentMouseY < element.getY() + element.getHeight());
             
         if (element.clipToBounds && !hit) return;
-
-        int nextClipL = clipL;
-        int nextClipT = clipT;
-        int nextClipR = clipR;
-        int nextClipB = clipB;
-        boolean nextHasClip = hasClip;
-
-        if (element.clipToBounds) {
-            nextHasClip = true;
-            int myAbsR = myAbsL + element.getWidth();
-            int myAbsB = myAbsT + element.getHeight();
-            nextClipL = hasClip ? Math.max(clipL, myAbsL) : myAbsL;
-            nextClipT = hasClip ? Math.max(clipT, myAbsT) : myAbsT;
-            nextClipR = hasClip ? Math.min(clipR, myAbsR) : myAbsR;
-            nextClipB = hasClip ? Math.min(clipB, myAbsB) : myAbsB;
-        }
 
         element.isHoveredForRender = hit;
 
@@ -191,48 +130,24 @@ public class UIEventDispatcher {
         double internalY = parentMouseY - element.getY();
         List<BaseUIElement> safeChildren = element.getChildren();
         for (int i = 0; i < safeChildren.size(); i++) {
-            routeMouseMoved(safeChildren.get(i), internalX, internalY,
-                            absMouseX, absMouseY, myAbsL, myAbsT,
-                            nextHasClip, nextClipL, nextClipT, nextClipR, nextClipB);
+            routeMouseMoved(safeChildren.get(i), internalX, internalY);
         }
         element.onMouseMoved(internalX, internalY);
     }
 
-    private boolean routeMouseScrolled(BaseUIElement element, double parentMouseX, double parentMouseY, double delta,
-                                       double absMouseX, double absMouseY, int absX, int absY,
-                                       boolean hasClip, int clipL, int clipT, int clipR, int clipB) {
+    private boolean routeMouseScrolled(BaseUIElement element, double parentMouseX, double parentMouseY, double delta) {
         if (!element.isVisible() || element.isCulledByScissor()) return false;
         
-        int myAbsL = absX + element.getX();
-        int myAbsT = absY + element.getY();
-
-        boolean hit = isHit(element, parentMouseX, parentMouseY, absMouseX, absMouseY, hasClip, clipL, clipT, clipR, clipB);
+        boolean hit = (parentMouseX >= element.getX() && parentMouseX < element.getX() + element.getWidth() &&
+            parentMouseY >= element.getY() && parentMouseY < element.getY() + element.getHeight());
             
         if (element.clipToBounds && !hit) return false;
-
-        int nextClipL = clipL;
-        int nextClipT = clipT;
-        int nextClipR = clipR;
-        int nextClipB = clipB;
-        boolean nextHasClip = hasClip;
-
-        if (element.clipToBounds) {
-            nextHasClip = true;
-            int myAbsR = myAbsL + element.getWidth();
-            int myAbsB = myAbsT + element.getHeight();
-            nextClipL = hasClip ? Math.max(clipL, myAbsL) : myAbsL;
-            nextClipT = hasClip ? Math.max(clipT, myAbsT) : myAbsT;
-            nextClipR = hasClip ? Math.min(clipR, myAbsR) : myAbsR;
-            nextClipB = hasClip ? Math.min(clipB, myAbsB) : myAbsB;
-        }
 
         double internalX = parentMouseX - element.getX();
         double internalY = parentMouseY - element.getY();
         List<BaseUIElement> safeChildren = element.getChildren();
         for (int i = safeChildren.size() - 1; i >= 0; i--) {
-            if (routeMouseScrolled(safeChildren.get(i), internalX, internalY, delta,
-                                   absMouseX, absMouseY, myAbsL, myAbsT,
-                                   nextHasClip, nextClipL, nextClipT, nextClipR, nextClipB)) return true;
+            if (routeMouseScrolled(safeChildren.get(i), internalX, internalY, delta)) return true;
         }
         if (hit) return element.onScrolled(internalX, internalY, delta);
         return false;
