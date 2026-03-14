@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.Core;
+package net.burgerfarm.baseui.client.core;
 
 import net.minecraft.client.gui.GuiGraphics;
 

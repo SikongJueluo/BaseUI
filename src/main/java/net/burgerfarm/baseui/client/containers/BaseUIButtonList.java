@@ -1,9 +1,10 @@
-package net.burgerfarm.baseui.CompoundComponents;
+package net.burgerfarm.baseui.client.containers;
 
-import net.burgerfarm.baseui.Components.BaseUIButton;
-import net.burgerfarm.baseui.Core.BaseUIElement;
-import net.burgerfarm.baseui.Layouts.BaseUIGrid;
-import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
+import net.burgerfarm.baseui.client.components.BaseUIButton;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
+import net.burgerfarm.baseui.client.layouts.BaseUIGrid;
+import net.burgerfarm.baseui.client.render.BaseUINineSliceTexture;
+import net.burgerfarm.baseui.client.views.BaseUIScrollView;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 

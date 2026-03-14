@@ -1,7 +1,8 @@
-package net.burgerfarm.baseui.CompoundComponents;
+package net.burgerfarm.baseui.client.containers;
 
-import net.burgerfarm.baseui.Core.BaseUIElement;
-import net.burgerfarm.baseui.Layouts.BaseUIGrid;
+import net.burgerfarm.baseui.client.core.BaseUIElement;
+import net.burgerfarm.baseui.client.layouts.BaseUIGrid;
+import net.burgerfarm.baseui.client.views.BaseUIScrollView;
 import net.minecraft.client.gui.GuiGraphics;
 
 import java.util.ArrayList;
