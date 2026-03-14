@@ -10,7 +10,7 @@ import java.util.List;
  * BaseUI 复合组件：滚动视窗 (ScrollView)
  * 特性：自动计算内容边界、支持横/纵双向滚动、无缝集成硬件裁剪、防悬空机制与动态增删 API。
  */
-public class BaseUIScrollView extends BaseUIElement {
+public class BaseUIScrollView extends BaseUIElement<BaseUIScrollView> {
 
     /**
      * 滚动方向枚举
@@ -21,12 +21,12 @@ public class BaseUIScrollView extends BaseUIElement {
     private ScrollDirection direction = ScrollDirection.VERTICAL;
 
     /** 承载内容的内部画布，所有实际内容应添加至此容器 */
-    private final BaseUIElement contentContainer;
+    private final BaseUIElement<?> contentContainer;
     /** 滚动条组件，复用 BaseUISlider */
     private final BaseUISlider scrollBar;
 
     /** 存储所有已添加内容的列表，用于布局计算 */
-    private final List<BaseUIElement> contentElements = new ArrayList<>();
+    private final List<BaseUIElement<?>> contentElements = new ArrayList<>();
 
     /** 滚动条的粗细（水平时为高度，垂直时为宽度） */
     private int scrollBarThickness = 6;
@@ -60,7 +60,7 @@ public class BaseUIScrollView extends BaseUIElement {
     /**
      * 专门为 ScrollView 准备的透明内容画布类，自身不渲染任何图形。
      */
-    private static class ScrollContent extends BaseUIElement {
+    private static class ScrollContent extends BaseUIElement<ScrollContent> {
         @Override
         protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
             // 画布本身是透明的，不渲染任何东西
@@ -114,7 +114,7 @@ public class BaseUIScrollView extends BaseUIElement {
      * @param child 要添加的子组件
      * @return 自身实例（链式调用）
      */
-    public BaseUIScrollView addContent(BaseUIElement child) {
+    public BaseUIScrollView addContent(BaseUIElement<?> child) {
         this.contentElements.add(child);
         this.contentContainer.addChild(child);
         refreshLayout();
@@ -126,7 +126,7 @@ public class BaseUIScrollView extends BaseUIElement {
      * @param child 要移除的子组件
      * @return 自身实例（链式调用）
      */
-    public BaseUIScrollView removeContent(BaseUIElement child) {
+    public BaseUIScrollView removeContent(BaseUIElement<?> child) {
         if (this.contentElements.remove(child)) {
             this.contentContainer.removeChild(child);
             refreshLayout();
@@ -201,7 +201,7 @@ public class BaseUIScrollView extends BaseUIElement {
         int contentW = 0;
         int contentH = 0;
 
-        for (BaseUIElement child : contentElements) {
+        for (BaseUIElement<?> child : contentElements) {
             if (!child.isVisible()) continue; // 忽略不可见的组件
 
             contentW = Math.max(contentW, child.getX() + child.getWidth());
@@ -275,7 +275,7 @@ public class BaseUIScrollView extends BaseUIElement {
         // 计算当前视口的物理可见区域 (基于 ScrollView 自身的尺寸)
         int viewportEnd = scrollOffsetInt + (direction == ScrollDirection.VERTICAL ? this.height : this.width);
 
-        for (BaseUIElement child : this.contentElements) {
+        for (BaseUIElement<?> child : this.contentElements) {
             // 比对主滚动轴上的坐标
             int childStart, childEnd;
             if (direction == ScrollDirection.VERTICAL) {

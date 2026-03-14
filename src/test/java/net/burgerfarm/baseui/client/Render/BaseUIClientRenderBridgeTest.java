@@ -225,7 +225,7 @@ class BaseUIClientRenderBridgeTest {
         return new BaseUIContext(graphics, mouseX, mouseY, 0.5f, 320, 240, false);
     }
 
-    private static class TestElement extends BaseUIElement {
+    private static class TestElement extends BaseUIElement<TestElement> {
         int renderCount = 0;
         int tickCount = 0;
 
@@ -254,7 +254,7 @@ class BaseUIClientRenderBridgeTest {
         }
     }
 
-    private static final class RootElement extends BaseUIElement {
+    private static final class RootElement extends BaseUIElement<RootElement> {
         final List<String> drawTrace = new ArrayList<>();
         String lastClickedId;
         String lastPressedId;
@@ -268,13 +268,13 @@ class BaseUIClientRenderBridgeTest {
         }
     }
 
-    private static class ContainerElement extends BaseUIElement {
+    private static class ContainerElement extends BaseUIElement<ContainerElement> {
         @Override
         protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
         }
     }
 
-    private static final class DrawTraceElement extends BaseUIElement {
+    private static final class DrawTraceElement extends BaseUIElement<DrawTraceElement> {
         private final String id;
         private final List<String> trace;
 
@@ -289,7 +289,7 @@ class BaseUIClientRenderBridgeTest {
         }
     }
 
-    private static final class ClickElement extends BaseUIElement {
+    private static final class ClickElement extends BaseUIElement<ClickElement> {
         private final String id;
 
         private ClickElement(String id) {
@@ -332,7 +332,7 @@ class BaseUIClientRenderBridgeTest {
         }
 
         private RootElement findRoot() {
-            BaseUIElement node = this;
+            BaseUIElement<?> node = this;
             while (node.getParent() != null) {
                 node = node.getParent();
             }

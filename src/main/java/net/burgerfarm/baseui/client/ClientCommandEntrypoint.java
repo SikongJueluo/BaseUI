@@ -29,7 +29,7 @@ public final class ClientCommandEntrypoint {
         });
     }
 
-    private static final class EmptyRootElement extends BaseUIElement {
+    private static final class EmptyRootElement extends BaseUIElement<EmptyRootElement> {
         @Override
         protected void drawSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, float finalAlpha) {
         }

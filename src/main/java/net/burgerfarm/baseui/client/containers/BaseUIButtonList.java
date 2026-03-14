@@ -31,7 +31,7 @@ import java.util.function.Consumer;
  * - 提供选中项变更回调
  * - 支持程序化选中和滚动到选中项
  */
-public class BaseUIButtonList extends BaseUIElement {
+public class BaseUIButtonList extends BaseUIElement<BaseUIButtonList> {
 
     /**
      * 选择模式枚举(单选/多选)
@@ -103,8 +103,8 @@ public class BaseUIButtonList extends BaseUIElement {
         this.grid.setWidth(safeWidth);
 
         // 遍历网格中的所有子组件，将按钮的宽度同步为安全宽度，高度保持 buttonHeight
-        List<BaseUIElement> safeChildren = this.grid.getChildren();
-        for(BaseUIElement child : safeChildren) {
+        List<BaseUIElement<?>> safeChildren = this.grid.getChildren();
+        for(BaseUIElement<?> child : safeChildren) {
             if (child instanceof BaseUIButton) {
                 child.setSize(safeWidth, this.buttonHeight);
             }
@@ -216,10 +216,10 @@ public class BaseUIButtonList extends BaseUIElement {
         int scrollThickness = this.scrollView.getScrollBarThickness();
         int safeWidth = Math.max(1, this.width - scrollThickness - 2);
 
-        BaseUIButton btn = new BaseUIButton();
-        btn.setText(text);
-        btn.setSize(safeWidth, buttonHeight);
-        btn.setOnClick(() -> onButtonClicked(index));
+        BaseUIButton btn = new BaseUIButton()
+                .setText(text)
+                .setSize(safeWidth, buttonHeight)
+                .setOnClick(() -> onButtonClicked(index));
 
         buttons.add(btn);
         grid.addChild(btn);

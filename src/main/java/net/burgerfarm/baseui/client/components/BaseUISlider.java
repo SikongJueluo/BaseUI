@@ -17,7 +17,7 @@ import java.util.function.Function;
  * BaseUI 基础交互组件：拖拽滑块
  * 集成：水平/垂直双向支持、绝对安全的焦点隔离、Home/End/PageUp/Down 极速跳转、消除浮点精度溢出。
  */
-public class BaseUISlider extends BaseUIElement {
+public class BaseUISlider extends BaseUIElement<BaseUISlider> {
 
     public enum Direction { HORIZONTAL, VERTICAL }
 

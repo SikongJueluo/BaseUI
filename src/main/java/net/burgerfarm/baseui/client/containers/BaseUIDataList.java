@@ -16,7 +16,7 @@ import java.util.function.Function;
  *
  * @param <T> 绑定的数据模型类型
  */
-public class BaseUIDataList<T> extends BaseUIElement {
+public class BaseUIDataList<T> extends BaseUIElement<BaseUIDataList<T>> {
 
     /** 内部的滚动视口，提供滚动能力和硬件裁剪 */
     private final BaseUIScrollView scrollView;
@@ -26,9 +26,9 @@ public class BaseUIDataList<T> extends BaseUIElement {
     /** 数据源列表 */
     private List<T> dataSource = new ArrayList<>();
     /** 行工厂：将数据模型转换为 UI 组件 */
-    private Function<T, BaseUIElement> rowFactory = null;
+    private Function<T, BaseUIElement<?>> rowFactory = null;
     /** 数据为空时显示的自定义 UI (如 "暂无数据" 文本) */
-    private BaseUIElement emptyStateUI = null;
+    private BaseUIElement<?> emptyStateUI = null;
 
     /**
      * 构造一个动态数据列表。
@@ -87,7 +87,7 @@ public class BaseUIDataList<T> extends BaseUIElement {
      * @param emptyStateUI 自定义空状态组件 (可为 null)
      * @return 自身实例
      */
-    public BaseUIDataList<T> setEmptyState(BaseUIElement emptyStateUI) {
+    public BaseUIDataList<T> setEmptyState(BaseUIElement<?> emptyStateUI) {
         if (this.emptyStateUI != null) this.removeChild(this.emptyStateUI);
         this.emptyStateUI = emptyStateUI;
         if (this.emptyStateUI != null) {
@@ -140,7 +140,7 @@ public class BaseUIDataList<T> extends BaseUIElement {
      * @param factory 工厂函数
      * @return 自身实例
      */
-    public BaseUIDataList<T> setRowFactory(Function<T, BaseUIElement> factory) {
+    public BaseUIDataList<T> setRowFactory(Function<T, BaseUIElement<?>> factory) {
         this.rowFactory = factory;
         return this;
     }
@@ -175,7 +175,7 @@ public class BaseUIDataList<T> extends BaseUIElement {
     public BaseUIDataList<T> addItem(T item) {
         this.dataSource.add(item);
         if (this.rowFactory != null) {
-            BaseUIElement rowUI = this.rowFactory.apply(item);
+            BaseUIElement<?> rowUI = this.rowFactory.apply(item);
             if (rowUI != null) this.rowContainer.addChild(rowUI);
         }
         checkEmptyState();
@@ -191,9 +191,9 @@ public class BaseUIDataList<T> extends BaseUIElement {
     public BaseUIDataList<T> addAllItems(List<T> items) {
         this.dataSource.addAll(items);
         if (this.rowFactory != null) {
-            List<BaseUIElement> newRows = new ArrayList<>();
+            List<BaseUIElement<?>> newRows = new ArrayList<>();
             for (T item : items) {
-                BaseUIElement rowUI = this.rowFactory.apply(item);
+                BaseUIElement<?> rowUI = this.rowFactory.apply(item);
                 if (rowUI != null) newRows.add(rowUI);
             }
             this.rowContainer.addChildren(newRows); // 网格底层只执行一次重排
@@ -247,9 +247,9 @@ public class BaseUIDataList<T> extends BaseUIElement {
      */
     public BaseUIDataList<T> scrollToRow(int index, boolean centerInViewport) {
         // 调用 V13.2 基类新增的 getChildren() 获取安全的公共只读列表
-        List<BaseUIElement> gridChildren = this.rowContainer.getChildren();
+        List<BaseUIElement<?>> gridChildren = this.rowContainer.getChildren();
         if (index >= 0 && index < gridChildren.size()) {
-            BaseUIElement targetRow = gridChildren.get(index);
+            BaseUIElement<?> targetRow = gridChildren.get(index);
             int rowY = targetRow.getY();
 
             if (centerInViewport) {
@@ -273,9 +273,9 @@ public class BaseUIDataList<T> extends BaseUIElement {
         this.rowContainer.clearChildren();
 
         if (this.rowFactory != null) {
-            List<BaseUIElement> newRows = new ArrayList<>();
+            List<BaseUIElement<?>> newRows = new ArrayList<>();
             for (T item : this.dataSource) {
-                BaseUIElement rowUI = this.rowFactory.apply(item);
+                BaseUIElement<?> rowUI = this.rowFactory.apply(item);
                 if (rowUI != null) newRows.add(rowUI);
             }
             this.rowContainer.addChildren(newRows);

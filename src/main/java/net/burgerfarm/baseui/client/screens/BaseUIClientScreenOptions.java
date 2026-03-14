@@ -15,13 +15,13 @@ public final class BaseUIClientScreenOptions {
     private final boolean pauseScreen;
     private final boolean renderBackground;
     private final boolean debugEnabled;
-    private final Function<BaseUIElement, BaseUIRenderBridge> renderFactory;
+    private final Function<BaseUIElement<?>, BaseUIRenderBridge> renderFactory;
 
     private BaseUIClientScreenOptions(
         boolean pauseScreen,
         boolean renderBackground,
         boolean debugEnabled,
-        Function<BaseUIElement, BaseUIRenderBridge> renderFactory) {
+        Function<BaseUIElement<?>, BaseUIRenderBridge> renderFactory) {
         this.pauseScreen = pauseScreen;
         this.renderBackground = renderBackground;
         this.debugEnabled = debugEnabled;
@@ -44,7 +44,7 @@ public final class BaseUIClientScreenOptions {
         return debugEnabled;
     }
 
-    public Function<BaseUIElement, BaseUIRenderBridge> renderFactory() {
+    public Function<BaseUIElement<?>, BaseUIRenderBridge> renderFactory() {
         return renderFactory;
     }
 
@@ -60,11 +60,11 @@ public final class BaseUIClientScreenOptions {
         return new BaseUIClientScreenOptions(pauseScreen, renderBackground, nextDebugEnabled, renderFactory);
     }
 
-    public BaseUIClientScreenOptions withRenderFactory(Function<BaseUIElement, BaseUIRenderBridge> nextRenderFactory) {
+    public BaseUIClientScreenOptions withRenderFactory(Function<BaseUIElement<?>, BaseUIRenderBridge> nextRenderFactory) {
         return new BaseUIClientScreenOptions(pauseScreen, renderBackground, debugEnabled, nextRenderFactory);
     }
 
-    public BaseUIRenderBridge createRender(BaseUIElement rootElement) {
+    public BaseUIRenderBridge createRender(BaseUIElement<?> rootElement) {
         Objects.requireNonNull(rootElement, "rootElement cannot be null");
         if (renderFactory == null) {
             return null;

@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  * - 音效反馈（点击、错误）
  * - 支持占位符、密码掩码
  */
-public class BaseUITextInput extends BaseUIElement {
+public class BaseUITextInput extends BaseUIElement<BaseUITextInput> {
 
     // ==========================================
     // 核心文本数据

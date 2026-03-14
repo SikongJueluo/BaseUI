@@ -19,7 +19,7 @@ final class BaseUIRenderState {
      * 当用户按下鼠标时，记录被点击的元素。
      * 用于在鼠标释放时判断是否应该触发该元素的释放事件。
      */
-    static BaseUIElement PRESS_TARGET = null;
+    static BaseUIElement<?> PRESS_TARGET = null;
 
     /**
      * 当前获得键盘焦点的UI元素
@@ -27,7 +27,7 @@ final class BaseUIRenderState {
      * 同一时间只有一个元素可以获得焦点。
      * 焦点元素会接收键盘输入事件。
      */
-    static BaseUIElement FOCUSED_ELEMENT = null;
+    static BaseUIElement<?> FOCUSED_ELEMENT = null;
 
     /**
      * 私有构造器，防止实例化

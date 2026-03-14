@@ -27,24 +27,24 @@ import java.util.List;
  *
  * @param <T> 子类自身的类型，用于实现链式调用（CRTP 模式）
  */
-public abstract class BaseUIElement {
+public abstract class BaseUIElement<T extends BaseUIElement<T>> {
 
     /**
      * 用于按 Z 值升序排序的比较器（Z 越小越靠下）
      */
-    private static final Comparator<BaseUIElement> Z_SORTER = Comparator.comparingInt(BaseUIElement::getZ);
+    private static final Comparator<BaseUIElement<?>> Z_SORTER = Comparator.comparingInt(BaseUIElement::getZ);
     /**
      * 子组件列表，按 Z 值排序
      */
-    protected final List<BaseUIElement> children = new ArrayList<>();
+    protected final List<BaseUIElement<?>> children = new ArrayList<>();
     /**
      * 用于安全遍历的子组件缓存列表，
      * 避免在 render 和事件 tick 中频繁执行 new ArrayList 导致 GC 卡顿。
      * (仅在增删改操作后进行同步)
      */
-    protected final List<BaseUIElement> renderChildrenCache = new ArrayList<>();
+    protected final List<BaseUIElement<?>> renderChildrenCache = new ArrayList<>();
     private final BaseUIRenderCommandBuffer renderCommandBuffer = new BaseUIRenderCommandBuffer();
-    private final List<BaseUIElement> readOnlyChildrenCache = Collections.unmodifiableList(renderChildrenCache);
+    private final List<BaseUIElement<?>> readOnlyChildrenCache = Collections.unmodifiableList(renderChildrenCache);
     /**
      * 当前组件的锚点类型，默认为 TOP_LEFT
      */
@@ -105,7 +105,7 @@ public abstract class BaseUIElement {
     /**
      * 父组件引用，若为 null 则表示根组件
      */
-    protected BaseUIElement parent;
+    protected BaseUIElement<?> parent;
     /**
      * 是否被滚动视口等容器在物理上剔除（仅阻止渲染和事件触发，不丢失焦点和按压状态）
      */
@@ -116,42 +116,13 @@ public abstract class BaseUIElement {
      * 【新增】防重入锁，防止 layout 更新时因递归调用陷入死循环。
      * 在 {@link #updateLayout()} 开始时设为 true，结束时设为 false。
      */
-    public BaseUIRenderCommandBuffer getRenderCommandBuffer() {
-        return renderCommandBuffer;
-    }
-
-    public int getLastFrameCommandCount() {
-        return lastFrameCommandCount;
-    }
-
     private boolean isUpdatingLayout = false;
 
     // ==========================================
     // 布局安全机制
     // ==========================================
-    private static BaseUIPerformanceMetrics globalMetrics;
-
-    public static void setGlobalMetrics(BaseUIPerformanceMetrics metrics) {
-        globalMetrics = metrics;
-    }
-
     private boolean layoutDirty = true;
     private boolean subtreeLayoutDirty = true;
-
-    public boolean isUpdatingLayout() { return isUpdatingLayout; }
-    public void setUpdatingLayout(boolean updatingLayout) { this.isUpdatingLayout = updatingLayout; }
-    public boolean isLayoutDirty() { return layoutDirty; }
-    public void setLayoutDirty(boolean dirty) { this.layoutDirty = dirty; }
-    public boolean isSubtreeLayoutDirty() { return subtreeLayoutDirty; }
-    public void setSubtreeLayoutDirty(boolean dirty) { this.subtreeLayoutDirty = dirty; }
-    public void clearLayoutDirty() { this.layoutDirty = false; this.subtreeLayoutDirty = false; }
-    public UIAnchor getAnchor() { return anchor; }
-    public int getAnchorOffsetX() { return anchorOffsetX; }
-    public int getAnchorOffsetY() { return anchorOffsetY; }
-    public void setComputedX(int x) { this.x = x; }
-    public void setComputedY(int y) { this.y = y; }
-    protected void afterLayoutPass() { }
-
 
     /**
      * 重置所有全局 UI 状态。
@@ -166,19 +137,22 @@ public abstract class BaseUIElement {
     // 树形结构
     // ==========================================
 
-        @SuppressWarnings("unchecked")
-    public <E extends BaseUIElement> E apply(java.util.function.Consumer<E> block) {
-        block.accept((E) this);
-        return (E) this;
-    }
-
     public static void resetRenderBridgeStates() {
         if (BaseUIRenderState.FOCUSED_ELEMENT != null) BaseUIRenderState.FOCUSED_ELEMENT.onFocusLost();
         BaseUIRenderState.FOCUSED_ELEMENT = null;
         BaseUIRenderState.PRESS_TARGET = null;
     }
 
-
+    /**
+     * 返回当前实例，类型转换为 T，用于实现链式调用。
+     * 警告：若 T 不是实际类型，转换可能不安全，但在此框架中约定子类正确实现。
+     *
+     * @return 当前对象，类型为 T
+     */
+    @SuppressWarnings("unchecked")
+    protected T self() {
+        return (T) this;
+    }
 
     /**
      * 检查并释放可能悬挂的焦点/按压状态。
@@ -202,10 +176,10 @@ public abstract class BaseUIElement {
      * @param root 可能的根组件
      * @return 如果在子树中则返回 true
      */
-    protected boolean isInSubtreeOf(BaseUIElement root) {
+    protected boolean isInSubtreeOf(BaseUIElement<?> root) {
         if (root == null) return false;
 
-        BaseUIElement current = this;
+        BaseUIElement<?> current = this;
         while (current != null) {
             if (current == root) return true;
             current = current.parent;
@@ -240,13 +214,13 @@ public abstract class BaseUIElement {
      * @param anchor 新的锚点
      * @return 当前实例，用于链式调用
      */
-    public BaseUIElement setAnchor(UIAnchor anchor) {
+    public T setAnchor(UIAnchor anchor) {
         if (this.anchor != anchor) {
             this.anchor = anchor;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -257,7 +231,7 @@ public abstract class BaseUIElement {
      * @param offsetY Y 轴偏移量
      * @return 当前实例，用于链式调用
      */
-    public BaseUIElement setAnchor(UIAnchor anchor, int offsetX, int offsetY) {
+    public T setAnchor(UIAnchor anchor, int offsetX, int offsetY) {
         boolean changed = (this.anchor != anchor || this.anchorOffsetX != offsetX || this.anchorOffsetY != offsetY);
         if (changed) {
             this.anchor = anchor;
@@ -266,7 +240,7 @@ public abstract class BaseUIElement {
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -275,7 +249,48 @@ public abstract class BaseUIElement {
      * 计算完成后递归调用所有子组件的 {@link #updateLayout()}。
      */
     public void updateLayout() {
-        UILayoutEngine.updateLayout(this);
+        if (isUpdatingLayout) return;
+        boolean forcePerFrameLayout = requiresPerFrameLayoutPass();
+        if (!forcePerFrameLayout && !layoutDirty && !subtreeLayoutDirty) return;
+        isUpdatingLayout = true;
+
+        try {
+            boolean selfDirtyAtEnter = layoutDirty;
+            beforeLayoutPass();
+            boolean recalcSelf = selfDirtyAtEnter || layoutDirty || forcePerFrameLayout;
+
+            if (recalcSelf && parent != null) {
+                int pw = parent.getWidth();
+                int ph = parent.getHeight();
+
+                this.x = switch (anchor) {
+                    case TOP_LEFT, MIDDLE_LEFT, BOTTOM_LEFT -> anchorOffsetX;
+                    case TOP_CENTER, CENTER, BOTTOM_CENTER -> (pw - this.width) / 2 + anchorOffsetX;
+                    case TOP_RIGHT, MIDDLE_RIGHT, BOTTOM_RIGHT -> pw - this.width + anchorOffsetX;
+                };
+
+                this.y = switch (anchor) {
+                    case TOP_LEFT, TOP_CENTER, TOP_RIGHT -> anchorOffsetY;
+                    case MIDDLE_LEFT, CENTER, MIDDLE_RIGHT -> (ph - this.height) / 2 + anchorOffsetY;
+                    case BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT -> ph - this.height + anchorOffsetY;
+                };
+            } else if (recalcSelf) {
+                this.x = anchorOffsetX;
+                this.y = anchorOffsetY;
+            }
+
+            boolean propagateAllChildren = recalcSelf;
+            for (BaseUIElement<?> child : children) {
+                if (propagateAllChildren || child.layoutDirty || child.subtreeLayoutDirty || child.requiresPerFrameLayoutPass()) {
+                    child.updateLayout();
+                }
+            }
+
+            layoutDirty = false;
+            subtreeLayoutDirty = false;
+        } finally {
+            isUpdatingLayout = false;
+        }
     }
 
     protected void beforeLayoutPass() {
@@ -302,7 +317,7 @@ public abstract class BaseUIElement {
     @SuppressWarnings("ForLoopReplaceableByForEach")
     public final void tickTree() {
         onTick();
-        List<BaseUIElement> safeChildren = this.renderChildrenCache;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = 0; i < safeChildren.size(); i++) {
             safeChildren.get(i).tickTree();
         }
@@ -315,14 +330,14 @@ public abstract class BaseUIElement {
      * @param y Y 偏移量
      * @return 当前实例
      */
-    public BaseUIElement setPos(int x, int y) {
+    public T setPos(int x, int y) {
         if (this.anchorOffsetX != x || this.anchorOffsetY != y) {
             this.anchorOffsetX = x;
             this.anchorOffsetY = y;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -332,14 +347,14 @@ public abstract class BaseUIElement {
      * @param height 新高度
      * @return 当前实例
      */
-    public BaseUIElement setSize(int width, int height) {
+    public T setSize(int width, int height) {
         if (this.width != width || this.height != height) {
             this.width = width;
             this.height = height;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -348,9 +363,9 @@ public abstract class BaseUIElement {
      * @param clip true 启用裁剪
      * @return 当前实例
      */
-    public BaseUIElement setClipToBounds(boolean clip) {
+    public T setClipToBounds(boolean clip) {
         this.clipToBounds = clip;
-        return this;
+        return self();
     }
 
     /**
@@ -359,9 +374,9 @@ public abstract class BaseUIElement {
      * @param focusable true 可获得焦点
      * @return 当前实例
      */
-    public BaseUIElement setFocusable(boolean focusable) {
+    public T setFocusable(boolean focusable) {
         this.focusable = focusable;
-        return this;
+        return self();
     }
 
     /**
@@ -370,9 +385,9 @@ public abstract class BaseUIElement {
      * @param alpha 透明度值
      * @return 当前实例
      */
-    public BaseUIElement setAlpha(float alpha) {
+    public T setAlpha(float alpha) {
         this.alpha = Math.max(0f, Math.min(1f, alpha));
-        return this;
+        return self();
     }
 
     // ====== 链式 Setter (加入数值脏检查，避免不必要的布局刷新) ======
@@ -385,7 +400,7 @@ public abstract class BaseUIElement {
      * @param child 要添加的子组件
      * @return 当前实例
      */
-    public BaseUIElement addChild(BaseUIElement child) {
+    public T addChild(BaseUIElement<?> child) {
         if (child.parent != null) child.parent.removeChild(child);
         child.parent = this;
         child.markLayoutDirty();
@@ -393,7 +408,7 @@ public abstract class BaseUIElement {
         child.updateLayout();
         sortChildren();
         this.subtreeLayoutDirty = true;
-        return this;
+        return self();
     }
 
     /**
@@ -403,14 +418,14 @@ public abstract class BaseUIElement {
      * @param child 要移除的子组件
      * @return 当前实例
      */
-    public BaseUIElement removeChild(BaseUIElement child) {
+    public T removeChild(BaseUIElement<?> child) {
         if (this.children.remove(child)) {
             child.parent = null;
             child.checkAndReleaseZombieStates();
             syncChildrenCache();
             this.subtreeLayoutDirty = true;
         }
-        return this;
+        return self();
     }
 
     /**
@@ -419,15 +434,15 @@ public abstract class BaseUIElement {
      *
      * @return 当前实例
      */
-    public BaseUIElement clearChildren() {
-        for (BaseUIElement child : children) {
+    public T clearChildren() {
+        for (BaseUIElement<?> child : children) {
             child.parent = null;
             child.checkAndReleaseZombieStates();
         }
         this.children.clear();
         syncChildrenCache();
         this.subtreeLayoutDirty = true;
-        return this;
+        return self();
     }
 
     /**
@@ -454,7 +469,7 @@ public abstract class BaseUIElement {
     /**
      * 获取安全的子组件列表副本（只读遍历使用）
      */
-    public List<BaseUIElement> getChildren() {
+    public List<BaseUIElement<?>> getChildren() {
         return readOnlyChildrenCache;
     }
 
@@ -625,7 +640,7 @@ public abstract class BaseUIElement {
             currentClipB);
 
         // 递归收集所有子元素的渲染命令
-        List<BaseUIElement> safeChildren = this.renderChildrenCache;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
         for (int i = 0; i < safeChildren.size(); i++) {
             safeChildren.get(i).collectRenderCommands(
                 commandBuffer,
@@ -721,6 +736,228 @@ public abstract class BaseUIElement {
 
     // ====== 焦点与按压状态 ======
 
+    /**
+     * 鼠标点击事件处理入口。
+     * 从最上层子组件向下传递，直到有组件消费事件。
+     * 若点击位置命中且可聚焦，则请求焦点；同时将当前组件设为按压目标。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键（0=左键，1=右键，2=中键等）
+     * @return true 表示事件已消费，停止传播
+     */
+    public final boolean mouseClicked(double parentMouseX, double parentMouseY, int button) {
+        if (parent == null && lastFrameCommandCount > 0) {
+            return mouseClickedFromFrameSnapshot(parentMouseX, parentMouseY, button);
+        }
+        if (!visible || isCulledByScissor()) return false;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+
+        if (clipToBounds && !hit) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+
+        // 逆序遍历子组件（Z 值大的在上层）
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseClicked(internalX, internalY, button)) return true;
+        }
+
+        if (hit) {
+            if (focusable) requestFocus();
+            BaseUIRenderState.PRESS_TARGET = this;
+            return onClicked(internalX, internalY, button);
+        }
+        return false;
+    }
+
+    /**
+     * 鼠标释放事件处理入口。
+     * 优先处理当前按压目标（若为自己），否则向下传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseReleased(double parentMouseX, double parentMouseY, int button) {
+        if (parent == null && BaseUIRenderState.PRESS_TARGET != null) {
+            BaseUIElement<?> target = BaseUIRenderState.PRESS_TARGET;
+            BaseUIRenderState.PRESS_TARGET = null;
+            return target.onReleased(parentMouseX - target.getAbsoluteX(),
+                                     parentMouseY - target.getAbsoluteY(),
+                                     button);
+        }
+        if (BaseUIRenderState.PRESS_TARGET == this) {
+            BaseUIRenderState.PRESS_TARGET = null;
+            return onReleased(parentMouseX - this.x, parentMouseY - this.y, button);
+        }
+        if (!visible) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseReleased(internalX, internalY, button)) return true;
+        }
+        return onReleased(internalX, internalY, button);
+    }
+
+    /**
+     * 鼠标拖拽事件处理入口。
+     * 优先发送给按压目标，否则向下传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param button       鼠标按键
+     * @param dragX        X 轴拖拽增量
+     * @param dragY        Y 轴拖拽增量
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseDragged(
+        double parentMouseX,
+        double parentMouseY,
+        int button,
+        double dragX,
+        double dragY) {
+        if (parent == null && BaseUIRenderState.PRESS_TARGET != null) {
+            BaseUIElement<?> target = BaseUIRenderState.PRESS_TARGET;
+            return target.onDragged(parentMouseX - target.getAbsoluteX(),
+                                    parentMouseY - target.getAbsoluteY(),
+                                    button,
+                                    dragX,
+                                    dragY);
+        }
+        if (BaseUIRenderState.PRESS_TARGET == this) {
+            return onDragged(parentMouseX - this.x, parentMouseY - this.y, button, dragX, dragY);
+        }
+        if (!visible) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseDragged(internalX, internalY, button, dragX, dragY)) return true;
+        }
+        return onDragged(internalX, internalY, button, dragX, dragY);
+    }
+
+    /**
+     * 鼠标移动事件处理入口。
+     * 更新当前组件的悬停状态，并向所有子组件传播。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
+    public final void mouseMoved(double parentMouseX, double parentMouseY) {
+        if (!visible || isCulledByScissor()) return;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+        if (clipToBounds && !hit) return;
+
+        this.isHoveredForRender = hit;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = 0; i < safeChildren.size(); i++) {
+            safeChildren.get(i).mouseMoved(internalX, internalY);
+        }
+        onMouseMoved(internalX, internalY);
+    }
+
+    /**
+     * 鼠标滚轮事件处理入口。
+     *
+     * @param parentMouseX 鼠标相对于父组件的 X 坐标
+     * @param parentMouseY 鼠标相对于父组件的 Y 坐标
+     * @param delta        滚动增量
+     * @return true 表示事件已消费
+     */
+    public final boolean mouseScrolled(double parentMouseX, double parentMouseY, double delta) {
+        if (parent == null && lastFrameCommandCount > 0) {
+            return mouseScrolledFromFrameSnapshot(parentMouseX, parentMouseY, delta);
+        }
+        if (!visible || isCulledByScissor()) return false;
+        boolean hit = (parentMouseX >= this.x && parentMouseX < this.x + this.width &&
+            parentMouseY >= this.y && parentMouseY < this.y + this.height);
+        if (clipToBounds && !hit) return false;
+
+        double internalX = parentMouseX - this.x;
+        double internalY = parentMouseY - this.y;
+        List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+        for (int i = safeChildren.size() - 1; i >= 0; i--) {
+            if (safeChildren.get(i).mouseScrolled(internalX, internalY, delta)) return true;
+        }
+        if (hit) return onScrolled(internalX, internalY, delta);
+        return false;
+    }
+
+    /**
+     * 键盘按键按下事件处理入口。
+     * 仅当焦点在此组件或其子树中时才会传播。
+     *
+     * @param keyCode   按键码
+     * @param scanCode  扫描码
+     * @param modifiers 修饰键（如 Shift、Ctrl）
+     * @return true 表示事件已消费
+     */
+    public final boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).keyPressed(keyCode, scanCode, modifiers)) return true;
+            }
+        }
+
+        // 只有当前组件真正拥有焦点时，才允许触发它自己的键盘回调
+        if (this.isFocused()) {
+            return onKeyPressed(keyCode, scanCode, modifiers);
+        }
+
+        return false;
+    }
+
+    // ==========================================
+    // 渲染管线与鼠标/键盘管线
+    // ==========================================
+
+    public final boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).keyReleased(keyCode, scanCode, modifiers)) return true;
+            }
+        }
+        return onKeyReleased(keyCode, scanCode, modifiers);
+    }
+
+    /**
+     * 字符输入事件处理入口。
+     * 仅当焦点在此组件或其子树中时才会传播。
+     *
+     * @param codePoint 输入的字符
+     * @param modifiers 修饰键
+     * @return true 表示事件已消费
+     */
+    public final boolean charTyped(char codePoint, int modifiers) {
+        if (!visible) return false;
+        if (BaseUIRenderState.FOCUSED_ELEMENT != null && BaseUIRenderState.FOCUSED_ELEMENT.isInSubtreeOf(this)) {
+            List<BaseUIElement<?>> safeChildren = this.renderChildrenCache;
+            for (int i = safeChildren.size() - 1; i >= 0; i--) {
+                if (safeChildren.get(i).charTyped(codePoint, modifiers)) return true;
+            }
+        }
+        if (this.isFocused()) {
+            return onCharTyped(codePoint, modifiers);
+        }
+        return false;
+    }
 
     /**
      * 鼠标点击回调
@@ -803,13 +1040,13 @@ public abstract class BaseUIElement {
      * @param x 新的偏移量
      * @return 当前实例
      */
-    public BaseUIElement setX(int x) {
+    public T setX(int x) {
         if (this.anchorOffsetX != x) {
             this.anchorOffsetX = x;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -825,13 +1062,13 @@ public abstract class BaseUIElement {
      * @param y 新的偏移量
      * @return 当前实例
      */
-    public BaseUIElement setY(int y) {
+    public T setY(int y) {
         if (this.anchorOffsetY != y) {
             this.anchorOffsetY = y;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -847,10 +1084,10 @@ public abstract class BaseUIElement {
      * @param z 新的 Z 值
      * @return 当前实例
      */
-    public BaseUIElement setZ(int z) {
+    public T setZ(int z) {
         this.z = z;
         if (parent != null) parent.sortChildren();
-        return this;
+        return self();
     }
 
     /**
@@ -866,13 +1103,13 @@ public abstract class BaseUIElement {
      * @param width 新宽度
      * @return 当前实例
      */
-    public BaseUIElement setWidth(int width) {
+    public T setWidth(int width) {
         if (this.width != width) {
             this.width = width;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -892,13 +1129,13 @@ public abstract class BaseUIElement {
      * @param height 新高度
      * @return 当前实例
      */
-    public BaseUIElement setHeight(int height) {
+    public T setHeight(int height) {
         if (this.height != height) {
             this.height = height;
             this.markLayoutDirty();
             this.updateLayout();
         }
-        return this;
+        return self();
     }
 
     /**
@@ -915,21 +1152,80 @@ public abstract class BaseUIElement {
      * @param visible true 可见
      * @return 当前实例
      */
-    public BaseUIElement setVisible(boolean visible) {
+    public T setVisible(boolean visible) {
         if (this.visible && !visible) this.checkAndReleaseZombieStates();
         this.visible = visible;
-        return this;
+        return self();
     }
 
-    public BaseUIElement getParent() {
+    public BaseUIElement<?> getParent() {
         return parent;
     }
 
+    private boolean mouseClickedFromFrameSnapshot(double mouseX, double mouseY, int button) {
+        for (int ordered = lastFrameCommandCount - 1; ordered >= 0; ordered--) {
+            int commandIndex = renderCommandBuffer.orderedIndexAt(ordered);
+            BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+            if (!element.visible || element.isCulledByScissor()) {
+                continue;
+            }
+            if (!isHitInCommandBounds(commandIndex, mouseX, mouseY)) {
+                continue;
+            }
+
+            double localX = mouseX - renderCommandBuffer.absXAt(commandIndex);
+            double localY = mouseY - renderCommandBuffer.absYAt(commandIndex);
+            if (element.focusable) {
+                element.requestFocus();
+            }
+            BaseUIRenderState.PRESS_TARGET = element;
+            return element.onClicked(localX, localY, button);
+        }
+        return false;
+    }
+
+    private boolean mouseScrolledFromFrameSnapshot(double mouseX, double mouseY, double delta) {
+        for (int ordered = lastFrameCommandCount - 1; ordered >= 0; ordered--) {
+            int commandIndex = renderCommandBuffer.orderedIndexAt(ordered);
+            BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+            if (!element.visible || element.isCulledByScissor()) {
+                continue;
+            }
+            if (!isHitInCommandBounds(commandIndex, mouseX, mouseY)) {
+                continue;
+            }
+            double localX = mouseX - renderCommandBuffer.absXAt(commandIndex);
+            double localY = mouseY - renderCommandBuffer.absYAt(commandIndex);
+            if (element.onScrolled(localX, localY, delta)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isHitInCommandBounds(int commandIndex, double mouseX, double mouseY) {
+        BaseUIElement<?> element = renderCommandBuffer.elementAt(commandIndex);
+        int left = renderCommandBuffer.absXAt(commandIndex);
+        int top = renderCommandBuffer.absYAt(commandIndex);
+        int right = left + element.width;
+        int bottom = top + element.height;
+        if (mouseX < left || mouseX >= right || mouseY < top || mouseY >= bottom) {
+            return false;
+        }
+
+        if (!renderCommandBuffer.hasClipAt(commandIndex)) {
+            return true;
+        }
+        return mouseX >= renderCommandBuffer.clipLAt(commandIndex)
+            && mouseY >= renderCommandBuffer.clipTAt(commandIndex)
+            && mouseX < renderCommandBuffer.clipRAt(commandIndex)
+            && mouseY < renderCommandBuffer.clipBAt(commandIndex);
+    }
 
     private void markLayoutDirty() {
         this.layoutDirty = true;
         this.subtreeLayoutDirty = true;
-        BaseUIElement p = this.parent;
+        BaseUIElement<?> p = this.parent;
         while (p != null) {
             p.subtreeLayoutDirty = true;
             p = p.parent;

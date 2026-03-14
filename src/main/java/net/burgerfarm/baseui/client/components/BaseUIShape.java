@@ -16,7 +16,7 @@ import java.util.Arrays;
  * BaseUI 异形组件：异形多边形与渐变引擎
  * 特性：零 GC 渲染管线、边构建边探测、抗精度丢失、静态工厂开箱即用。
  */
-public class BaseUIShape extends BaseUIElement {
+public class BaseUIShape extends BaseUIElement<BaseUIShape> {
 
     // ==========================================
     // 零 GC 扁平化数据缓冲
