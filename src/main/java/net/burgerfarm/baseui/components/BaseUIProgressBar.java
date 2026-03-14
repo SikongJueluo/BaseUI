@@ -1,7 +1,7 @@
-package net.burgerfarm.baseui.Components;
+package net.burgerfarm.baseui.components;
 
 import net.burgerfarm.baseui.core.BaseUIElement;
-import net.burgerfarm.baseui.Render.BaseUINineSliceTexture;
+import net.burgerfarm.baseui.render.BaseUINineSliceTexture;
 import net.minecraft.client.gui.GuiGraphics;
 
 import java.util.function.Supplier;

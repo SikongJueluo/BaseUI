@@ -1,8 +1,8 @@
-package net.burgerfarm.baseui.Client;
+package net.burgerfarm.baseui.client;
 
 import net.burgerfarm.baseui.BaseUIMod;
-import net.burgerfarm.baseui.Client.Screens.BaseUIClientScreen;
-import net.burgerfarm.baseui.Commands.BaseUICommands;
+import net.burgerfarm.baseui.client.Screens.BaseUIClientScreen;
+import net.burgerfarm.baseui.commands.BaseUICommands;
 import net.burgerfarm.baseui.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;

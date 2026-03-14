@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.Render;
+package net.burgerfarm.baseui.render;
 
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;

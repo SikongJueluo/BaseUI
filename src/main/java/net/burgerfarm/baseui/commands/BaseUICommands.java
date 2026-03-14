@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.Commands;
+package net.burgerfarm.baseui.commands;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;

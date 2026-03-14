@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.Client.Render;
+package net.burgerfarm.baseui.client.Render;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.List;
 import net.burgerfarm.baseui.core.BaseUIContext;
-import net.burgerfarm.baseui.Client.RenderBridge.BaseUIClientRenderBridge;
+import net.burgerfarm.baseui.client.RenderBridge.BaseUIClientRenderBridge;
 import net.burgerfarm.baseui.core.BaseUIElement;
 import net.minecraft.client.gui.GuiGraphics;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,4 +1,4 @@
-package net.burgerfarm.baseui.Client.RenderBridge;
+package net.burgerfarm.baseui.client.RenderBridge;
 
 import net.burgerfarm.baseui.core.BaseUIContext;
 
